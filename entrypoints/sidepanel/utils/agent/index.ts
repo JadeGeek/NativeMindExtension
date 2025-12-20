@@ -310,6 +310,7 @@ export class Agent<T extends PromptBasedToolName> {
         abortSignal: abortController.signal,
         messages: this.injectImagesToLastMessage(thisLoopMessages, loopImages),
         temporaryModelOverride: this.temporaryModelOverride,
+        temperature: this.historyManager.chatHistory.value.temperature,
       })
       let hasError = false
       let text = ''

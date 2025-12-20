@@ -188,6 +188,7 @@ export type ChatHistoryV1 = {
   id: string
   title: string
   lastInteractedAt?: number // last time user interacted with this chat(ask/click/select)
+  temperature?: number // per-chat temperature override
   /**
   * information about the last context update
   * e.g.

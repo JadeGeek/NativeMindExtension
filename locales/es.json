@@ -21,6 +21,19 @@
         "captured_page_prefix": "Página capturada:"
       }
     },
+    "temperature": {
+      "title": "Temperatura",
+      "helper": "Valores más altos hacen las respuestas más aleatorias"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "Valores más altos hacen las respuestas más aleatorias",
+      "reset": "Restablecer"
+    },
+    "settings_temperature": {
+      "title": "Temperatura",
+      "helper": "Valores más altos hacen las respuestas más aleatorias"
+    },
     "messages": {
       "reading": "Leyendo",
       "search_locally": "Buscando localmente en el navegador...",
@@ -187,6 +200,10 @@
       "max_size": "Tamaño Máximo",
       "retention_days": "Período de Retención",
       "days": "días"
+    },
+    "temperature": {
+      "title": "Temperatura",
+      "helper": "Valores más altos hacen las respuestas más aleatorias"
     },
     "advanced": {
       "title": "Avanzado"

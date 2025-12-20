@@ -36,7 +36,7 @@ import { preparePortConnection, shouldGenerateChatTitle } from './utils'
 type StreamTextOptions = Omit<Parameters<typeof originalStreamText>[0], 'tools'>
 type GenerateTextOptions = Omit<Parameters<typeof originalGenerateText>[0], 'tools'>
 type GenerateObjectOptions = Omit<Parameters<typeof originalGenerateObject>[0], 'tools'>
-type ExtraGenerateOptions = { modelId?: string, endpointType?: LLMEndpointType, reasoning?: ReasoningOption, autoThinking?: boolean }
+type ExtraGenerateOptions = { modelId?: string, endpointType?: LLMEndpointType, reasoning?: ReasoningOption, autoThinking?: boolean, temperature?: number }
 type ExtraGenerateOptionsWithTools = ExtraGenerateOptions
 type SchemaOptions<S extends SchemaName> = { schema: S } | { jsonSchema: JSONSchema }
 
@@ -84,6 +84,7 @@ const generateExtraModelOptions = (options: ExtraGenerateOptions) => {
     ...(options.endpointType !== undefined ? { endpointType: options.endpointType } : {}),
     ...(options.reasoning !== undefined ? { reasoning: options.reasoning } : {}),
     ...(options.autoThinking !== undefined ? { autoThinking: options.autoThinking } : {}),
+    ...(options.temperature !== undefined ? { temperature: options.temperature } : {}),
   }
 }
 
@@ -113,7 +114,7 @@ const normalizeError = (_error: unknown, endpointType?: LLMEndpointType) => {
   return error
 }
 
-const streamText = async (options: Pick<StreamTextOptions, 'messages' | 'prompt' | 'system' | 'maxTokens' | 'topK' | 'topP'> & ExtraGenerateOptionsWithTools) => {
+const streamText = async (options: Pick<StreamTextOptions, 'messages' | 'prompt' | 'system' | 'maxTokens' | 'topK' | 'topP' | 'temperature'> & ExtraGenerateOptionsWithTools) => {
   const abortController = new AbortController()
   const portName = `streamText-${Date.now().toString(32)}`
   const onStart = async (port: Browser.runtime.Port) => {
@@ -142,6 +143,7 @@ const streamText = async (options: Pick<StreamTextOptions, 'messages' | 'prompt'
         tools: PromptBasedTool.createFakeAnyTools(),
         experimental_activeTools: [],
         maxTokens: options.maxTokens,
+        temperature: options.temperature,
         abortSignal: abortController.signal,
       })
       for await (const chunk of response.fullStream) {
@@ -165,7 +167,7 @@ const streamText = async (options: Pick<StreamTextOptions, 'messages' | 'prompt'
   return { portName }
 }
 
-const generateTextAsync = async (options: Pick<GenerateTextOptions, 'messages' | 'prompt' | 'system' | 'maxTokens'> & ExtraGenerateOptionsWithTools) => {
+const generateTextAsync = async (options: Pick<GenerateTextOptions, 'messages' | 'prompt' | 'system' | 'maxTokens' | 'temperature'> & ExtraGenerateOptionsWithTools) => {
   try {
     const response = originalGenerateText({
       model: await getModel({ ...(await getModelUserConfig({ model: options.modelId, endpointType: options.endpointType })), ...generateExtraModelOptions(options) }),
@@ -174,6 +176,7 @@ const generateTextAsync = async (options: Pick<GenerateTextOptions, 'messages' |
       system: options.system,
       tools: PromptBasedTool.createFakeAnyTools(),
       maxTokens: options.maxTokens,
+      temperature: options.temperature,
       experimental_activeTools: [],
     })
     return response
@@ -255,6 +258,7 @@ const streamObjectFromSchema = async <S extends SchemaName>(options: Pick<Genera
           system: injectSchemaToSystemPrompt(options.system),
           messages: injectSchemaToSystemMessage(options.messages),
           abortSignal: abortController.signal,
+          temperature: options.temperature,
         })
         let text = ''
         for await (const chunk of response.fullStream) {
@@ -283,6 +287,7 @@ const streamObjectFromSchema = async <S extends SchemaName>(options: Pick<Genera
           prompt: options.prompt,
           system: options.system,
           messages: options.messages,
+          temperature: options.temperature,
           abortSignal: abortController.signal,
         })
         for await (const chunk of response.fullStream) {
@@ -324,6 +329,7 @@ export const generateObjectFromSchema = async <S extends SchemaName>(options: Pi
         prompt: options.prompt,
         system: injectSchemaToSystemPrompt(options.system),
         messages: injectSchemaToSystemMessage(options.messages),
+        temperature: options.temperature,
       })
       const parsed = safeParseJSON<z.infer<Schemas[S]>>({ text: response.text, schema: s })
       if (!parsed.success) {
@@ -347,6 +353,7 @@ export const generateObjectFromSchema = async <S extends SchemaName>(options: Pi
         prompt: options.prompt,
         system: options.system,
         messages: options.messages,
+        temperature: options.temperature,
       })
     }
     else {
@@ -357,6 +364,7 @@ export const generateObjectFromSchema = async <S extends SchemaName>(options: Pi
         prompt: options.prompt,
         system: options.system,
         messages: options.messages,
+        temperature: options.temperature,
       })
     }
   }

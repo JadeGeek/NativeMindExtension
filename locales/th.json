@@ -7,6 +7,19 @@
       "search_locally": "กำลังค้นหาในเบราว์เซอร์...",
       "used_model": "ใช้ {model}"
     },
+    "temperature": {
+      "title": "อุณหภูมิ",
+      "helper": "ค่ายิ่งสูง การตอบสนองยิ่งสุ่ม"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "ค่ายิ่งสูง การตอบสนองยิ่งสุ่ม",
+      "reset": "รีเซ็ต"
+    },
+    "settings_temperature": {
+      "title": "อุณหภูมิ",
+      "helper": "ค่ายิ่งสูง การตอบสนองยิ่งสุ่ม"
+    },
     "quick_actions": {
       "title": "การกระทำที่รวดเร็ว"
     },
@@ -162,6 +175,10 @@
       "max_size": "ขนาดสูงสุด",
       "retention_days": "ระยะเวลาเก็บข้อมูล",
       "days": "วัน"
+    },
+    "temperature": {
+      "title": "อุณหภูมิ",
+      "helper": "ค่ายิ่งสูง การตอบสนองยิ่งสุ่ม"
     },
     "advanced": {
       "title": "การตั้งค่าขั้นสูง"

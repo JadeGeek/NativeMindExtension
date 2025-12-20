@@ -7,6 +7,19 @@
       "search_locally": "브라우저에서 검색 중...",
       "used_model": "{model} 사용"
     },
+    "temperature": {
+      "title": "온도",
+      "helper": "값이 높을수록 응답이 더 무작위가 됩니다"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "값이 높을수록 응답이 더 무작위가 됩니다",
+      "reset": "초기화"
+    },
+    "settings_temperature": {
+      "title": "온도",
+      "helper": "값이 높을수록 응답이 더 무작위가 됩니다"
+    },
     "quick_actions": {
       "title": "빠른 액션"
     },
@@ -162,6 +175,10 @@
       "max_size": "최대 크기",
       "retention_days": "보존 기간",
       "days": "일"
+    },
+    "temperature": {
+      "title": "온도",
+      "helper": "값이 높을수록 응답이 더 무작위가 됩니다"
     },
     "advanced": {
       "title": "고급 설정"

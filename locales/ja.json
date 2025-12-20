@@ -7,6 +7,19 @@
       "search_locally": "ブラウザ内で検索中...",
       "used_model": "{model}を使用"
     },
+    "temperature": {
+      "title": "温度",
+      "helper": "値が高いほど回答がランダムになります"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "値を上げると応答がランダムになります",
+      "reset": "リセット"
+    },
+    "settings_temperature": {
+      "title": "温度",
+      "helper": "値が高いほど回答がランダムになります"
+    },
     "quick_actions": {
       "title": "クイックアクション"
     },
@@ -162,6 +175,10 @@
       "max_size": "最大サイズ",
       "retention_days": "保持期間",
       "days": "日"
+    },
+    "temperature": {
+      "title": "温度",
+      "helper": "値が高いほど回答がランダムになります"
     },
     "advanced": {
       "title": "詳細設定"

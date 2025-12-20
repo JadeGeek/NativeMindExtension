@@ -7,6 +7,19 @@
       "search_locally": "Recherche locale dans le navigateur...",
       "used_model": "Utilisé {model}"
     },
+    "temperature": {
+      "title": "Température",
+      "helper": "Des valeurs plus élevées rendent les réponses plus aléatoires"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "Une valeur plus élevée rend les réponses plus aléatoires",
+      "reset": "Réinitialiser"
+    },
+    "settings_temperature": {
+      "title": "Température",
+      "helper": "Des valeurs plus élevées rendent les réponses plus aléatoires"
+    },
     "quick_actions": {
       "title": "Actions rapides"
     },
@@ -162,6 +175,10 @@
       "max_size": "Taille Maximale",
       "retention_days": "Période de Rétention",
       "days": "jours"
+    },
+    "temperature": {
+      "title": "Température",
+      "helper": "Des valeurs plus élevées rendent les réponses plus aléatoires"
     },
     "advanced": {
       "title": "Avancé"

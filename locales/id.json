@@ -7,6 +7,19 @@
       "search_locally": "Mencari secara lokal di browser...",
       "used_model": "Menggunakan {model}"
     },
+    "temperature": {
+      "title": "Temperatur",
+      "helper": "Nilai lebih tinggi membuat respons lebih acak"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "Nilai lebih tinggi membuat respons lebih acak",
+      "reset": "Atur ulang"
+    },
+    "settings_temperature": {
+      "title": "Temperatur",
+      "helper": "Nilai lebih tinggi membuat respons lebih acak"
+    },
     "quick_actions": {
       "title": "Tindakan cepat"
     },
@@ -162,6 +175,10 @@
       "max_size": "Ukuran Maksimal",
       "retention_days": "Periode Penyimpanan",
       "days": "hari"
+    },
+    "temperature": {
+      "title": "Temperatur",
+      "helper": "Nilai lebih tinggi membuat respons lebih acak"
     },
     "advanced": {
       "title": "Canggih"

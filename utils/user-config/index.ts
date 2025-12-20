@@ -106,6 +106,7 @@ export async function _getUserConfig() {
       endpointType: await new Config('llm.endpointType').default('ollama' as LLMEndpointType).build(),
       model: await new Config<string, undefined>('llm.model').build(),
       apiKey: await new Config('llm.apiKey').default('ollama').build(),
+      temperature: await new Config('llm.temperature').default(0.7).build(),
       reasoning,
       titleGenerationSystemPrompt: await new Config('llm.titleGenerationSystemPrompt').default(DEFAULT_CHAT_TITLE_GENERATION_SYSTEM_PROMPT).build(),
       backends: {

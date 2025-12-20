@@ -13,6 +13,7 @@ export interface ChatHistoryRecord {
   contextUpdateInfo?: string // JSON serialized contextUpdateInfo from ChatHistoryV1
   reasoningEnabled?: StoredReasoningPreference // reasoning setting for this chat
   onlineSearchEnabled?: boolean // online search setting for this chat, default is true
+  temperature?: number // per-chat temperature override
   createdAt: number
   updatedAt: number
 }

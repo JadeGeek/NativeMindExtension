@@ -35,6 +35,7 @@ export async function* streamTextInBackground(options: Parameters<typeof s2bRpc.
   const requestOptions = {
     ...restOptions,
     ...(computedReasoning !== undefined ? { reasoning: computedReasoning } : {}),
+    temperature: restOptions.temperature ?? userConfig.llm.temperature.get(),
     modelId,
     endpointType,
   }

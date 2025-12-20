@@ -15,6 +15,15 @@
         "translation_system_prompt_error": "system prompt must contain {'{{LANGUAGE}}'}"
       }
     },
+    "temperature": {
+      "title": "Temperature",
+      "helper": "Higher values make responses more random"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "Higher values make responses more random",
+      "reset": "Reset"
+    },
     "get_ollama": "Get Ollama",
     "test": "Test",
     "ollama": {
@@ -107,6 +116,10 @@
       "max_size": "Max Size",
       "retention_days": "Retention Period",
       "days": "days"
+    },
+    "temperature": {
+      "title": "Temperature",
+      "helper": "Higher values make responses more random"
     },
     "advanced": {
       "title": "Advanced"
@@ -270,6 +283,11 @@
       "low": "Low",
       "medium": "Medium",
       "high": "High"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "Higher values make responses more random",
+      "reset": "Reset"
     },
     "input": {
       "placeholder": {

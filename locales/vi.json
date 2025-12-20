@@ -7,6 +7,19 @@
       "search_locally": "Đang tìm kiếm trong trình duyệt...",
       "used_model": "Đã sử dụng {model}"
     },
+    "temperature": {
+      "title": "Nhiệt độ",
+      "helper": "Giá trị cao hơn làm phản hồi ngẫu nhiên hơn"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "Giá trị cao hơn làm phản hồi ngẫu nhiên hơn",
+      "reset": "Đặt lại"
+    },
+    "settings_temperature": {
+      "title": "Nhiệt độ",
+      "helper": "Giá trị cao hơn làm phản hồi ngẫu nhiên hơn"
+    },
     "quick_actions": {
       "title": "Thao tác nhanh"
     },
@@ -162,6 +175,10 @@
       "max_size": "Kích thước Tối đa",
       "retention_days": "Thời gian Lưu trữ",
       "days": "ngày"
+    },
+    "temperature": {
+      "title": "Nhiệt độ",
+      "helper": "Giá trị cao hơn làm phản hồi ngẫu nhiên hơn"
     },
     "advanced": {
       "title": "Nâng cao"

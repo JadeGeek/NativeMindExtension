@@ -7,6 +7,19 @@
       "search_locally": "在瀏覽器中本地搜尋…",
       "used_model": "使用了 {model}"
     },
+    "temperature": {
+      "title": "溫度",
+      "helper": "值越高，回應越隨機"
+    },
+    "temperature": {
+      "label": "溫度",
+      "helper": "值越高，回應越隨機",
+      "reset": "重設"
+    },
+    "settings_temperature": {
+      "title": "溫度",
+      "helper": "值越高，回應越隨機"
+    },
     "quick_actions": {
       "title": "快捷操作"
     },
@@ -162,6 +175,10 @@
       "max_size": "最大大小",
       "retention_days": "保留期限",
       "days": "天"
+    },
+    "temperature": {
+      "title": "溫度",
+      "helper": "值越高，回應越隨機"
     },
     "advanced": {
       "title": "進階"

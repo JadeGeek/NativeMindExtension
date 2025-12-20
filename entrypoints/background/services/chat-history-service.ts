@@ -77,6 +77,7 @@ export class BackgroundChatHistoryService {
       contextUpdateInfo: record.contextUpdateInfo ? JSON.parse(record.contextUpdateInfo) : undefined,
       reasoningEnabled: reasoningPreference,
       onlineSearchEnabled: record.onlineSearchEnabled ?? true, // default to true if undefined for backward compatibility
+      temperature: record.temperature,
       history: JSON.parse(record.history) as HistoryItemV1[],
     }
   }
@@ -119,6 +120,7 @@ export class BackgroundChatHistoryService {
         contextUpdateInfo: chatHistory.contextUpdateInfo ? JSON.stringify(chatHistory.contextUpdateInfo) : undefined,
         reasoningEnabled: chatHistory.reasoningEnabled,
         onlineSearchEnabled: chatHistory.onlineSearchEnabled,
+        temperature: chatHistory.temperature,
         createdAt: now, // Will be overwritten if record exists
         updatedAt: now,
       }
@@ -743,7 +745,7 @@ export class BackgroundChatHistoryService {
   /**
    * Generate chat title based on first user and assistant messages using LLM
    */
-  private async generateChatTitle(userMessage: string, assistantMessage: string): Promise<string> {
+  private async generateChatTitle(userMessage: string, assistantMessage: string, temperature?: number): Promise<string> {
     const i18n = await useGlobalI18n()
     try {
       const userConfig = await getUserConfig()
@@ -759,6 +761,7 @@ export class BackgroundChatHistoryService {
         schema: 'chatTitle',
         system: prompt.system,
         prompt: prompt.user.extractText(),
+        temperature: temperature ?? userConfig.llm.temperature.get(),
       })
 
       const generatedTitle = result.object.title?.trim()
@@ -801,7 +804,7 @@ export class BackgroundChatHistoryService {
         const firstAssistant = assistantMessages[0]
 
         log.debug('Auto-generating chat title for chat:', chatHistory.id)
-        const newTitle = await this.generateChatTitle(firstUser.content, firstAssistant.content)
+        const newTitle = await this.generateChatTitle(firstUser.content, firstAssistant.content, chatHistory.temperature)
         if (newTitle !== i18n.t('chat_history.new_chat')) {
           // Update the title in the chat history
           chatHistory.title = newTitle

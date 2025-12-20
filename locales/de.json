@@ -7,6 +7,19 @@
       "thought_for_seconds": "Gedanke für {second} Sekunde | Gedanke für {second} Sekunden",
       "used_model": "Verwendet {model}"
     },
+    "temperature": {
+      "title": "Temperatur",
+      "helper": "Höhere Werte machen Antworten zufälliger"
+    },
+    "temperature": {
+      "label": "Temp",
+      "helper": "Höherer Wert macht Antworten zufälliger",
+      "reset": "Zurücksetzen"
+    },
+    "settings_temperature": {
+      "title": "Temperatur",
+      "helper": "Höhere Werte machen Antworten zufälliger"
+    },
     "quick_actions": {
       "title": "Schnelle Aktionen"
     },
@@ -162,6 +175,10 @@
       "max_size": "Maximale Größe",
       "retention_days": "Aufbewahrungsdauer",
       "days": "Tage"
+    },
+    "temperature": {
+      "title": "Temperatur",
+      "helper": "Höhere Werte machen Antworten zufälliger"
     },
     "advanced": {
       "title": "Fortschrittlich"

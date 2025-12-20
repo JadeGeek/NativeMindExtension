@@ -15,6 +15,14 @@
         "translation_system_prompt_error": "系统提示必须包含 {'{{LANGUAGE}}'}"
       }
     },
+    "temperature": {
+      "title": "温度",
+      "helper": "值越高，回复越随机"
+    },
+    "settings_temperature": {
+      "title": "温度",
+      "helper": "值越高，回复越随机"
+    },
     "get_ollama": "获取Ollama",
     "test": "测试",
     "ollama": {
@@ -348,6 +356,11 @@
       "permission_reload_title": "需要重新加载",
       "permission_reload_description": "授予权限后，请在 Firefox 中重新启用 NativeMind 扩展以启用截图功能。",
       "reload_extension": "重新加载扩展"
+    },
+    "temperature": {
+      "label": "温度",
+      "helper": "值越高，回复越随机",
+      "reset": "重置"
     }
   },
   "chat_history": {

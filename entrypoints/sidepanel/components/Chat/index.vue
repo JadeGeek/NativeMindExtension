@@ -102,6 +102,7 @@
               <ThinkingEffortSelector v-if="showReasoningEffortSelector" />
               <ThinkingModeSwitch v-else />
               <OnlineSearchSwitch />
+              <TemperatureControl />
             </div>
             <div class="flex gap-2 flex-row">
               <CameraButton
@@ -169,6 +170,7 @@ import MessageAssistant from './Messages/Assistant.vue'
 import MessageTask from './Messages/Task.vue'
 import MessageUser from './Messages/User.vue'
 import OnlineSearchSwitch from './OnlineSearchSwitch.vue'
+import TemperatureControl from './TemperatureControl.vue'
 import ThinkingEffortSelector from './ThinkingEffortSelector.vue'
 import ThinkingModeSwitch from './ThinkingModeSwitch.vue'
 

@@ -344,6 +344,7 @@ export class Chat {
           lastInteractedAt: Date.now(),
           reasoningEnabled: undefined, // Default to undefined for new chats
           onlineSearchEnabled: true, // Default to true for new chats
+          temperature: userConfig.llm.temperature.get(),
         })
 
         const applyReasoningPreference = (preference?: StoredReasoningPreference) => {
@@ -359,6 +360,12 @@ export class Chat {
 
         applyReasoningPreference(chatHistory.value.reasoningEnabled)
         userConfig.chat.onlineSearch.enable.set(chatHistory.value.onlineSearchEnabled ?? true)
+        if (chatHistory.value.temperature === undefined) {
+          chatHistory.value.temperature = userConfig.llm.temperature.get()
+        }
+        else {
+          userConfig.llm.temperature.set(chatHistory.value.temperature)
+        }
         const contextAttachments = ref<ContextAttachmentStorage>(await s2bRpc.getContextAttachments(chatHistoryId.value) ?? { attachments: [], id: chatHistoryId.value, lastInteractedAt: Date.now() })
         const chatList = ref<ChatList>([])
         const updateChatList = async () => {
@@ -413,6 +420,7 @@ export class Chat {
             contextUpdateInfo: undefined,
             reasoningEnabled: undefined, // Default to undefined for new chats
             onlineSearchEnabled: true, // Default to true for new chats
+            temperature: userConfig.llm.temperature.get(),
           }
 
           const newContextAttachments: ContextAttachmentStorage = await s2bRpc.getContextAttachments(newId) ?? {
@@ -427,6 +435,12 @@ export class Chat {
 
           applyReasoningPreference(newChatHistory.reasoningEnabled)
           userConfig.chat.onlineSearch.enable.set(newChatHistory.onlineSearchEnabled ?? true)
+          if (newChatHistory.temperature === undefined) {
+            newChatHistory.temperature = userConfig.llm.temperature.get()
+          }
+          else {
+            userConfig.llm.temperature.set(newChatHistory.temperature)
+          }
 
           // Clean up any loading messages
           instance.historyManager.cleanupLoadingMessages()
