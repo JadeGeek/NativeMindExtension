@@ -175,6 +175,7 @@ defineExpose({
 const userConfig = await getUserConfig()
 const ollamaBaseUrl = userConfig.llm.backends.ollama.baseUrl.toRef()
 const lmStudioBaseUrl = userConfig.llm.backends.lmStudio.baseUrl.toRef()
+const openaiBaseUrl = userConfig.llm.backends.openai.baseUrl.toRef()
 const commonModel = userConfig.llm.model.toRef()
 const translationModel = userConfig.translation.model.toRef()
 const endpointType = userConfig.llm.endpointType.toRef()
@@ -206,6 +207,7 @@ const modelOptions = computed(() => {
   const ollamaModels = modelList.value.filter((model) => model.backend === 'ollama')
   const lmStudioModels = modelList.value.filter((model) => model.backend === 'lm-studio')
   const webllmModels = modelList.value.filter((model) => model.backend === 'web-llm')
+  const openaiModels = modelList.value.filter((model) => model.backend === 'openai-compatible')
 
   const makeModelOptions = (model: typeof modelList.value[number]) => ({ type: 'option' as const, id: `${model.backend}#${model.model}`, label: model.name, model: { backend: model.backend, id: model.model } })
   const makeHeader = (label: string) => ({ type: 'header' as const, id: `header-${label}`, label, selectable: false })
@@ -224,6 +226,12 @@ const modelOptions = computed(() => {
       options.push(
         makeHeader(t('settings.models.lmstudio_models', { count: lmStudioModels.length })),
         ...lmStudioModels.map((model) => makeModelOptions(model)),
+      )
+    }
+    if (openaiModels.length) {
+      options.push(
+        makeHeader(t('settings.models.openai_models', { count: openaiModels.length })),
+        ...openaiModels.map((model) => makeModelOptions(model)),
       )
     }
     return options
@@ -291,7 +299,7 @@ watch([endpointType, selectedModel], async (newVal) => {
   updateModelList()
 })
 
-watch([ollamaBaseUrl, lmStudioBaseUrl], async () => updateModelList())
+watch([ollamaBaseUrl, lmStudioBaseUrl, openaiBaseUrl], async () => updateModelList())
 
 onMounted(() => {
   updateModelList()

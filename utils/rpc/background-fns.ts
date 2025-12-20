@@ -20,6 +20,7 @@ import { parsePartialJson } from '../json/parser/parse-partial-json'
 import * as lmStudioUtils from '../llm/lm-studio'
 import { getModel, getModelUserConfig, LLMEndpointType, ModelLoadingProgressEvent } from '../llm/models'
 import * as ollamaUtils from '../llm/ollama'
+import * as openaiCompatibleUtils from '../llm/openai-compatible'
 import { SchemaName, Schemas, selectSchema } from '../llm/output-schema'
 import { PromptBasedTool } from '../llm/tools/prompt-based/helpers'
 import { getWebLLMEngine, WebLLMSupportedModel } from '../llm/web-llm'
@@ -679,6 +680,7 @@ async function checkModelReady(modelId: string) {
     else if (endpointType === 'web-llm') {
       return await hasWebLLMModelInCache(modelId as WebLLMSupportedModel)
     }
+    else if (endpointType === 'openai-compatible') return true
     else throw new Error('Unsupported endpoint type ' + endpointType)
   }
   catch (error) {
@@ -700,6 +702,9 @@ async function initCurrentModel() {
   else if (endpointType === 'web-llm') {
     const connectInfo = initWebLLMEngine(model as WebLLMSupportedModel)
     return connectInfo.portName
+  }
+  else if (endpointType === 'openai-compatible') {
+    return false
   }
   else {
     throw new Error('Unsupported endpoint type ' + endpointType)
@@ -1120,6 +1125,8 @@ export const backgroundFunctions = {
   getLMStudioRunningModelList: lmStudioUtils.getRunningModelList,
   testLMStudioConnection: lmStudioUtils.testConnection,
   unloadLMStudioModel,
+  getOpenAIModelList: openaiCompatibleUtils.getLocalModelList,
+  testOpenAIConnection: openaiCompatibleUtils.testConnection,
   deleteOllamaModel,
   pullOllamaModel,
   showOllamaModelDetails,

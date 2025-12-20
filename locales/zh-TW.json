@@ -181,7 +181,8 @@
       "no_model": "⚠️ 沒有模型",
       "add_model_to_start": "新增模型以開始",
       "ollama_models": "Ollama 模型 ({count})",
-      "lmstudio_models": "LM Studio 模型 ({count})"
+      "lmstudio_models": "LM Studio 模型 ({count})",
+      "openai_models": "OpenAI 相容模型 ({count})"
     },
     "ollama": {
       "already_installed": "已經安裝並執行Ollama？",
@@ -349,7 +350,21 @@
       },
       "ollama": {
         "title": "配置 Ollama"
+      },
+      "openai": {
+        "title": "配置相容 OpenAI 的 API"
       }
+    },
+    "openai": {
+      "server_address": "API 基本 URL",
+      "server_address_desc": "OpenAI 相容的 API 端點（例如：https://api.openai.com/v1）",
+      "api_key": "API Key",
+      "api_key_desc": "用於在 OpenAI 相容供應商進行驗證的 API Key",
+      "context_window_size": "情境視窗大小",
+      "custom_context_window_size": "自訂情境視窗大小",
+      "context_window_size_desc": "輸入自訂的情境視窗大小（單位：token，最小：512）",
+      "context_window_size_error": "情境視窗大小至少需 {min} 個 token",
+      "connection_status": "連線狀態：{status}"
     },
     "get_lm_studio": "取得 LM Studio",
     "delete": "刪除",

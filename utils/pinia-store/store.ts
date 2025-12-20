@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 
 import { LMStudioModelInfo } from '@/types/lm-studio-models'
 import { OllamaModelInfo } from '@/types/ollama-models'
+import { OpenAICompatibleModelInfo } from '@/utils/llm/openai-compatible'
 import { logger } from '@/utils/logger'
 import { c2bRpc, s2bRpc, settings2bRpc } from '@/utils/rpc'
 
@@ -115,6 +116,40 @@ export const useLLMBackendStatusStore = defineStore('llm-backend-status', () => 
     return success
   }
 
+  // OpenAI-compatible model list and connection status
+  const openaiModelList = ref<OpenAICompatibleModelInfo[]>([])
+  const openaiModelListUpdating = ref(false)
+  const openaiConnectionStatus = ref<'unconnected' | 'connected' | 'error'>('unconnected')
+  const openaiConnectionStatusLoading = ref(false)
+  const updateOpenAIModelList = async (): Promise<OpenAICompatibleModelInfo[]> => {
+    try {
+      openaiModelListUpdating.value = true
+      const response = await rpc.getOpenAIModelList()
+      openaiModelList.value = response.models
+      openaiConnectionStatus.value = 'connected'
+      return openaiModelList.value
+    }
+    catch (error) {
+      log.error('Failed to fetch OpenAI-compatible model list:', error)
+      openaiConnectionStatus.value = 'error'
+      openaiModelList.value = []
+      return []
+    }
+    finally {
+      openaiModelListUpdating.value = false
+    }
+  }
+  const updateOpenAIConnectionStatus = async () => {
+    openaiConnectionStatusLoading.value = true
+    const success = await rpc.testOpenAIConnection().catch(() => false)
+    openaiConnectionStatus.value = success ? 'connected' : 'error'
+    openaiConnectionStatusLoading.value = false
+    return success
+  }
+  const clearOpenAIModelList = () => {
+    openaiModelList.value = []
+  }
+
   const checkCurrentModelSupportVision = async () => {
     const userConfig = await getUserConfig()
     const endpointType = userConfig.llm.endpointType.get()
@@ -162,11 +197,16 @@ export const useLLMBackendStatusStore = defineStore('llm-backend-status', () => 
         model: m.modelKey,
         name: m.displayName ?? m.modelKey,
       })),
+      ...openaiModelList.value.map((m) => ({
+        backend: 'openai-compatible' as const,
+        model: m.id,
+        name: m.id,
+      })),
     ]
   })
 
   const modelListUpdating = computed(() => {
-    return ollamaModelListUpdating.value || lmStudioModelListUpdating.value
+    return ollamaModelListUpdating.value || lmStudioModelListUpdating.value || openaiModelListUpdating.value
   })
 
   // this function has side effects: it may change the common model in user config
@@ -203,6 +243,20 @@ export const useLLMBackendStatusStore = defineStore('llm-backend-status', () => 
       }
       else { status = 'backend-unavailable' }
     }
+    else if (endpointType === 'openai-compatible') {
+      const backendStatus = await updateOpenAIConnectionStatus()
+      if (backendStatus) {
+        const openaiList = await updateOpenAIModelList()
+        if (!openaiList.some((model) => model.id === commonModelConfig.get())) {
+          if (openaiList.length) {
+            commonModelConfig.set(openaiList[0]?.id)
+            status = 'ok'
+          }
+          else { status = 'no-model' }
+        }
+      }
+      else { status = 'backend-unavailable' }
+    }
     return { modelList, commonModel: commonModelConfig.get(), status, endpointType }
   }
 
@@ -211,7 +265,13 @@ export const useLLMBackendStatusStore = defineStore('llm-backend-status', () => 
     // Always update both Ollama and LMStudio backends so users can see
     // all available models when switching between backends in ModelSelector
     // WebLLM doesn't need updating as it uses static SUPPORTED_MODELS
-    await Promise.allSettled([updateOllamaModelList(), updateLMStudioModelList()])
+    const userConfig = await getUserConfig()
+    const shouldUpdateOpenAI = userConfig.llm.endpointType.get() === 'openai-compatible'
+    await Promise.allSettled([
+      updateOllamaModelList(),
+      updateLMStudioModelList(),
+      shouldUpdateOpenAI ? updateOpenAIModelList() : Promise.resolve(openaiModelList.value),
+    ])
     return modelList.value
   }
 
@@ -235,6 +295,14 @@ export const useLLMBackendStatusStore = defineStore('llm-backend-status', () => 
     deleteOllamaModel,
     clearLMStudioModelList,
     updateLMStudioConnectionStatus,
+    // OpenAI-compatible
+    openaiConnectionStatusLoading,
+    openaiConnectionStatus,
+    openaiModelList,
+    openaiModelListUpdating,
+    updateOpenAIModelList,
+    clearOpenAIModelList,
+    updateOpenAIConnectionStatus,
     // Common
     checkCurrentModelSupportVision,
     checkModelSupportThinking,

@@ -54,7 +54,8 @@
       "no_model": "⚠️ 无模型",
       "add_model_to_start": "添加模型以开始",
       "ollama_models": "Ollama 模型 ({count})",
-      "lmstudio_models": "LM Studio 模型 ({count})"
+      "lmstudio_models": "LM Studio 模型 ({count})",
+      "openai_models": "OpenAI 兼容模型 ({count})"
     },
     "quick_actions": {
       "title": "自定义快捷操作",
@@ -195,7 +196,21 @@
       },
       "ollama": {
         "title": "配置 Ollama"
+      },
+      "openai": {
+        "title": "配置 OpenAI 兼容 API"
       }
+    },
+    "openai": {
+      "server_address": "API 基础 URL",
+      "server_address_desc": "OpenAI 兼容的 API 端点（例如：https://api.openai.com/v1）",
+      "api_key": "API Key",
+      "api_key_desc": "用于在 OpenAI 兼容提供商处进行认证的 API Key",
+      "context_window_size": "上下文窗口大小",
+      "custom_context_window_size": "自定义上下文窗口大小",
+      "context_window_size_desc": "输入自定义上下文窗口大小（单位：token，最小值：512）",
+      "context_window_size_error": "上下文窗口大小至少为 {min} 个 token",
+      "connection_status": "连接状态：{status}"
     },
     "get_lm_studio": "获取 LM Studio",
     "delete": "删除",

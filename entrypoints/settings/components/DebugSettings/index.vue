@@ -631,6 +631,7 @@ const modelProviderOptions = [
   { id: 'ollama' as const, label: 'Ollama' },
   { id: 'lm-studio' as const, label: 'LM Studio' },
   { id: 'web-llm' as const, label: 'Web LLM' },
+  { id: 'openai-compatible' as const, label: 'OpenAI Compatible' },
 ]
 
 const cacheStats = ref<CacheStats>()

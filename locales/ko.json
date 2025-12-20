@@ -181,7 +181,8 @@
       "no_model": "⚠️ 모델 없음",
       "add_model_to_start": "모델을 추가하여 시작하세요",
       "lmstudio_models": "LM Studio 모델 ({count})",
-      "ollama_models": "Ollama 모델 ({count})"
+      "ollama_models": "Ollama 모델 ({count})",
+      "openai_models": "OpenAI 호환 모델 ({count})"
     },
     "ollama": {
       "already_installed": "이미 Ollama를 설치하고 실행 중인가요?",
@@ -349,7 +350,21 @@
       },
       "ollama": {
         "title": "Ollama 구성"
+      },
+      "openai": {
+        "title": "OpenAI 호환 API 구성"
       }
+    },
+    "openai": {
+      "server_address": "API 기본 URL",
+      "server_address_desc": "OpenAI 호환 API 엔드포인트 (예: https://api.openai.com/v1)",
+      "api_key": "API 키",
+      "api_key_desc": "OpenAI 호환 공급자에 인증할 때 사용하는 API 키",
+      "context_window_size": "컨텍스트 윈도우 크기",
+      "custom_context_window_size": "사용자 정의 컨텍스트 윈도우 크기",
+      "context_window_size_desc": "사용자 정의 컨텍스트 윈도우 크기를 토큰 단위로 입력하세요 (최소: 512)",
+      "context_window_size_error": "컨텍스트 윈도우 크기는 최소 {min} 토큰이어야 합니다",
+      "connection_status": "연결 상태: {status}"
     },
     "delete": "삭제",
     "get_lm_studio": "LM Studio 다운로드",

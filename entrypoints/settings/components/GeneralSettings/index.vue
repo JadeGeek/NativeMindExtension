@@ -28,6 +28,7 @@
     <div class="flex flex-col gap-4">
       <OllamaConfiguration :scrollTarget="settingsQuery.scrollTarget.value" />
       <LMStudioConfiguration :scrollTarget="settingsQuery.scrollTarget.value" />
+      <OpenAIConfiguration :scrollTarget="settingsQuery.scrollTarget.value" />
       <Block :title="t('settings.interface.title')">
         <div class="flex flex-col gap-4">
           <Section
@@ -73,6 +74,7 @@ import Section from '../Section.vue'
 import DownloadWebLLMModel from '../WebLLMDownloadModal.vue'
 import LMStudioConfiguration from './Blocks/LMStudioConfiguration.vue'
 import OllamaConfiguration from './Blocks/OllamaConfiguration.vue'
+import OpenAIConfiguration from './Blocks/OpenAIConfiguration.vue'
 
 const { t } = useI18n()
 const llmBackendStatusStore = useLLMBackendStatusStore()

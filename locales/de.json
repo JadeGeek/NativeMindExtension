@@ -181,7 +181,8 @@
       "no_model": "⚠️ Kein Modell",
       "add_model_to_start": "Fügen Sie ein Modell hinzu, um zu beginnen",
       "ollama_models": "Ollama Modelle ({count})",
-      "lmstudio_models": "LM Studio Modelle ({count})"
+      "lmstudio_models": "LM Studio Modelle ({count})",
+      "openai_models": "OpenAI-kompatible Modelle ({count})"
     },
     "ollama": {
       "already_installed": "Haben Sie Ollama bereits installiert und gestartet?",
@@ -349,7 +350,21 @@
       },
       "ollama": {
         "title": "Ollama konfigurieren"
+      },
+      "openai": {
+        "title": "OpenAI-kompatible API konfigurieren"
       }
+    },
+    "openai": {
+      "server_address": "API-Basis-URL",
+      "server_address_desc": "OpenAI-kompatibler API-Endpunkt (z. B. https://api.openai.com/v1)",
+      "api_key": "API-Schlüssel",
+      "api_key_desc": "API-Schlüssel zur Authentifizierung bei Ihrem OpenAI-kompatiblen Anbieter",
+      "context_window_size": "Kontextfenstergröße",
+      "custom_context_window_size": "Benutzerdefinierte Kontextfenstergröße",
+      "context_window_size_desc": "Benutzerdefinierte Kontextfenstergröße in Tokens eingeben (Minimum: 512)",
+      "context_window_size_error": "Kontextfenstergröße muss mindestens {min} Tokens betragen",
+      "connection_status": "Verbindungsstatus: {status}"
     },
     "get_lm_studio": "Holen Sie sich LM Studio",
     "delete": "Löschen",

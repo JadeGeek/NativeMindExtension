@@ -181,7 +181,8 @@
       "no_model": "⚠️ Tidak ada model",
       "add_model_to_start": "Tambahkan model untuk memulai",
       "ollama_models": "Model Ollama ({count})",
-      "lmstudio_models": "Model LM Studio ({count})"
+      "lmstudio_models": "Model LM Studio ({count})",
+      "openai_models": "Model kompatibel OpenAI ({count})"
     },
     "ollama": {
       "already_installed": "Sudah menginstal dan menjalankan Ollama?",
@@ -349,7 +350,21 @@
       },
       "ollama": {
         "title": "Konfigurasi Ollama"
+      },
+      "openai": {
+        "title": "Konfigurasi API kompatibel OpenAI"
       }
+    },
+    "openai": {
+      "server_address": "URL dasar API",
+      "server_address_desc": "Endpoint API kompatibel OpenAI (mis. https://api.openai.com/v1)",
+      "api_key": "API Key",
+      "api_key_desc": "API key yang digunakan untuk autentikasi dengan penyedia kompatibel OpenAI Anda",
+      "context_window_size": "Ukuran jendela konteks",
+      "custom_context_window_size": "Ukuran jendela konteks kustom",
+      "context_window_size_desc": "Masukkan ukuran jendela konteks kustom dalam token (minimal: 512)",
+      "context_window_size_error": "Ukuran jendela konteks harus minimal {min} token",
+      "connection_status": "Status koneksi: {status}"
     },
     "get_lm_studio": "Dapatkan LM Studio",
     "delete": "Hapus",

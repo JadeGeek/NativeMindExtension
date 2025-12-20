@@ -181,7 +181,8 @@
       "no_model": "⚠️ モデルなし",
       "add_model_to_start": "モデルを追加して開始",
       "ollama_models": "Ollama モデル ({count})",
-      "lmstudio_models": "LM Studio モデル ({count})"
+      "lmstudio_models": "LM Studio モデル ({count})",
+      "openai_models": "OpenAI互換モデル ({count})"
     },
     "ollama": {
       "already_installed": "Ollamaをすでにインストールして実行していますか？",
@@ -349,7 +350,21 @@
       },
       "ollama": {
         "title": "Ollamaを設定する"
+      },
+      "openai": {
+        "title": "OpenAI互換APIを設定する"
       }
+    },
+    "openai": {
+      "server_address": "APIベースURL",
+      "server_address_desc": "OpenAI互換APIエンドポイント（例: https://api.openai.com/v1）",
+      "api_key": "APIキー",
+      "api_key_desc": "OpenAI互換プロバイダで認証するためのAPIキー",
+      "context_window_size": "コンテキストウィンドウサイズ",
+      "custom_context_window_size": "カスタムコンテキストウィンドウサイズ",
+      "context_window_size_desc": "カスタムコンテキストウィンドウサイズをトークン数で入力（最低: 512）",
+      "context_window_size_error": "コンテキストウィンドウサイズは{min}トークン以上である必要があります",
+      "connection_status": "接続ステータス: {status}"
     },
     "get_lm_studio": "LM Studioを入手",
     "delete": "削除",

@@ -181,7 +181,8 @@
       "no_model": "⚠️ ไม่มีโมเดล",
       "add_model_to_start": "เพิ่มโมเดลเพื่อเริ่มต้น",
       "ollama_models": "โมเดล Ollama ({count})",
-      "lmstudio_models": "LM Studio โมเดล ({count})"
+      "lmstudio_models": "LM Studio โมเดล ({count})",
+      "openai_models": "โมเดลที่รองรับ OpenAI ({count})"
     },
     "ollama": {
       "already_installed": "ติดตั้งและใช้งาน Ollama อยู่แล้ว?",
@@ -349,7 +350,21 @@
       },
       "ollama": {
         "title": "กำหนดค่า Ollama"
+      },
+      "openai": {
+        "title": "กำหนดค่า API ที่รองรับ OpenAI"
       }
+    },
+    "openai": {
+      "server_address": "API Base URL",
+      "server_address_desc": "จุดเชื่อมต่อ API ที่รองรับ OpenAI (เช่น https://api.openai.com/v1)",
+      "api_key": "API Key",
+      "api_key_desc": "คีย์ API สำหรับยืนยันตัวตนกับผู้ให้บริการที่รองรับ OpenAI",
+      "context_window_size": "ขนาดหน้าต่างบริบท",
+      "custom_context_window_size": "ขนาดหน้าต่างบริบทแบบกำหนดเอง",
+      "context_window_size_desc": "ป้อนขนาดหน้าต่างบริบทแบบกำหนดเองเป็นจำนวนโทเค็น (ขั้นต่ำ: 512)",
+      "context_window_size_error": "ขนาดหน้าต่างบริบทต้องไม่น้อยกว่า {min} โทเค็น",
+      "connection_status": "สถานะการเชื่อมต่อ: {status}"
     },
     "get_lm_studio": "ดาวน์โหลด LM Studio",
     "delete": "ลบ",

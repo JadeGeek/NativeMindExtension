@@ -54,7 +54,8 @@
       "no_model": "⚠️ No model",
       "add_model_to_start": "Add a model to start",
       "ollama_models": "Ollama Models ({count})",
-      "lmstudio_models": "LM Studio Models ({count})"
+      "lmstudio_models": "LM Studio Models ({count})",
+      "openai_models": "OpenAI Compatible Models ({count})"
     },
     "quick_actions": {
       "title": "Customize Quick Actions",
@@ -82,7 +83,21 @@
         "title": "Configure LM Studio",
         "model_management_desc": "Model download, loading, and deletion must be done in the LM Studio desktop app. This only shows current running status.",
         "already_installed": "Already installed and run LM Studio?"
+      },
+      "openai": {
+        "title": "Configure OpenAI-compatible API"
       }
+    },
+    "openai": {
+      "server_address": "API Base URL",
+      "server_address_desc": "OpenAI-compatible API endpoint (e.g. https://api.openai.com/v1)",
+      "api_key": "API Key",
+      "api_key_desc": "The API key used to authenticate with your OpenAI-compatible provider",
+      "context_window_size": "Context Window Size",
+      "custom_context_window_size": "Custom Context Window Size",
+      "context_window_size_desc": "Enter custom context window size in tokens (minimum: 512)",
+      "context_window_size_error": "Context window size must be at least {min} tokens",
+      "connection_status": "Connection status: {status}"
     },
     "cache": {
       "title": "Translation Cache",

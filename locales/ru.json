@@ -181,7 +181,8 @@
       "no_model": "⚠️ Модель отсутствует",
       "add_model_to_start": "Добавьте модель для начала",
       "ollama_models": "Модели Ollama ({count})",
-      "lmstudio_models": "LM Studio Модели ({count})"
+      "lmstudio_models": "LM Studio Модели ({count})",
+      "openai_models": "Совместимые с OpenAI модели ({count})"
     },
     "ollama": {
       "already_installed": "Уже установлен и запущен Ollama?",
@@ -349,7 +350,21 @@
       },
       "ollama": {
         "title": "Настроить Ollama"
+      },
+      "openai": {
+        "title": "Настроить совместимый с OpenAI API"
       }
+    },
+    "openai": {
+      "server_address": "Базовый URL API",
+      "server_address_desc": "Совместимый с OpenAI API-эндпоинт (например, https://api.openai.com/v1)",
+      "api_key": "API ключ",
+      "api_key_desc": "API ключ для аутентификации у вашего совместимого с OpenAI провайдера",
+      "context_window_size": "Размер контекстного окна",
+      "custom_context_window_size": "Пользовательский размер контекстного окна",
+      "context_window_size_desc": "Введите пользовательский размер контекстного окна в токенах (минимум: 512)",
+      "context_window_size_error": "Размер контекстного окна должен быть не менее {min} токенов",
+      "connection_status": "Статус подключения: {status}"
     },
     "get_lm_studio": "Получить LM Studio",
     "delete": "Удалить",

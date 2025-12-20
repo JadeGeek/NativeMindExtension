@@ -181,7 +181,8 @@
       "no_model": "⚠️ Không có mô hình",
       "add_model_to_start": "Thêm một mô hình để bắt đầu",
       "ollama_models": "Các Mô hình Ollama ({count})",
-      "lmstudio_models": "LM Studio Models ({count}) → Các Mô hình LM Studio ({count})"
+      "lmstudio_models": "LM Studio Models ({count}) → Các Mô hình LM Studio ({count})",
+      "openai_models": "Mô hình tương thích OpenAI ({count})"
     },
     "ollama": {
       "already_installed": "Bạn đã cài đặt và chạy Ollama?",
@@ -349,7 +350,21 @@
       },
       "ollama": {
         "title": "Cấu hình Ollama"
+      },
+      "openai": {
+        "title": "Cấu hình API tương thích OpenAI"
       }
+    },
+    "openai": {
+      "server_address": "URL gốc API",
+      "server_address_desc": "Điểm cuối API tương thích OpenAI (vd. https://api.openai.com/v1)",
+      "api_key": "API Key",
+      "api_key_desc": "API key dùng để xác thực với nhà cung cấp tương thích OpenAI",
+      "context_window_size": "Kích thước cửa sổ ngữ cảnh",
+      "custom_context_window_size": "Kích thước cửa sổ ngữ cảnh tùy chỉnh",
+      "context_window_size_desc": "Nhập kích thước cửa sổ ngữ cảnh tùy chỉnh tính theo token (tối thiểu: 512)",
+      "context_window_size_error": "Kích thước cửa sổ ngữ cảnh phải ít nhất {min} token",
+      "connection_status": "Trạng thái kết nối: {status}"
     },
     "get_lm_studio": "Tải LM Studio",
     "delete": "Xóa",
