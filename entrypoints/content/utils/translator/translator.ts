@@ -20,6 +20,8 @@ export async function* translateParagraphs(options: {
     done: boolean
   }> {
   const { paragraphs, targetLanguage, model, abortSignal, maxRetry = 3 } = options
+  const userConfig = await getUserConfig()
+  const temperature = userConfig.llm.temperature.get()
   const prompt = await translateTextList(paragraphs, targetLanguage)
   const resp = streamObjectInBackground({
     modelId: model,
@@ -28,6 +30,7 @@ export async function* translateParagraphs(options: {
     system: prompt.system,
     abortSignal,
     autoThinking: true,
+    temperature,
   })
 
   let translation: string[] = []
