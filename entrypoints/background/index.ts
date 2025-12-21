@@ -21,6 +21,71 @@ import { BackgroundWindowManager } from './services/window-manager'
 import { waitUntilSidepanelLoaded } from './utils'
 
 export default defineBackground(() => {
+  const tabSidePanelEnabledState = new Map<number, boolean>()
+
+  const setSidePanelEnabled = async (tabId: number, enabled: boolean) => {
+    if (!browser.sidePanel) return
+
+    if ('setOptions' in browser.sidePanel && typeof browser.sidePanel.setOptions === 'function') {
+      try {
+        await browser.sidePanel.setOptions({ tabId, enabled })
+      }
+      catch (error) {
+        logger.warn('Failed to set side panel options', { tabId, enabled, error })
+      }
+    }
+    tabSidePanelEnabledState.set(tabId, enabled)
+  }
+
+  const isSidePanelEnabled = async (tabId: number) => {
+    if (!browser.sidePanel) return false
+
+    if ('getOptions' in browser.sidePanel && typeof browser.sidePanel.getOptions === 'function') {
+      try {
+        const options = await browser.sidePanel.getOptions({ tabId } as { tabId: number })
+        if (typeof (options as { enabled?: boolean }).enabled === 'boolean') {
+          const enabled = Boolean((options as { enabled?: boolean }).enabled)
+          tabSidePanelEnabledState.set(tabId, enabled)
+          return enabled
+        }
+      }
+      catch (error) {
+        logger.warn('Failed to get side panel options', { tabId, error })
+      }
+    }
+
+    return tabSidePanelEnabledState.get(tabId) ?? false
+  }
+
+  const toggleSidePanelForActiveTab = async () => {
+    if (import.meta.env.FIREFOX && browser.sidebarAction?.toggle) {
+      await browser.sidebarAction.toggle()
+      return
+    }
+
+    if (!browser.sidePanel) {
+      logger.warn('Side panel API not available; cannot toggle via shortcut')
+      return
+    }
+
+    const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true })
+    if (!activeTab?.id || typeof activeTab.windowId === 'undefined') {
+      logger.warn('No active tab found to toggle side panel')
+      return
+    }
+
+    const enabled = await isSidePanelEnabled(activeTab.id)
+    if (enabled) {
+      await setSidePanelEnabled(activeTab.id, false)
+      return
+    }
+
+    await setSidePanelEnabled(activeTab.id, true)
+    await browser.sidePanel.open({ windowId: activeTab.windowId }).catch((error) => {
+      logger.warn('Failed to open side panel for active window', { windowId: activeTab.windowId, error })
+    })
+  }
+
   if (import.meta.env.CHROME) {
     browser.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' })
   }
@@ -38,6 +103,14 @@ export default defineBackground(() => {
       browser.sidebarAction?.toggle()
     })
   }
+
+  browser.commands?.onCommand.addListener((command) => {
+    if (command === 'toggle-extension') {
+      toggleSidePanelForActiveTab().catch((error) => {
+        logger.error('Failed to handle toggle-extension command', error)
+      })
+    }
+  })
 
   browser.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     logger.info('tab removed', { tabId, removeInfo, isFirefox: import.meta.env.FIREFOX })

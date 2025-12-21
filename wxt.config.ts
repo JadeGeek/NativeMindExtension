@@ -92,8 +92,8 @@ export default defineConfig({
     content_security_policy: {
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'self';`,
     },
-    // Include the action manifest key to ensure the toolbar button (in the top-right corner) is clickable in Firefox
-    action: IS_FIREFOX ? { default_title: EXTENSION_SHORT_NAME } : undefined,
+    // Include the action manifest key so action click + keyboard shortcuts can open the side panel
+    action: { default_title: EXTENSION_SHORT_NAME },
     // Opera supports sidebar_action, while Chrome ignores that field
     sidebar_action: {
       default_title: EXTENSION_SHORT_NAME,
@@ -111,5 +111,14 @@ export default defineConfig({
     ],
     host_permissions: ['*://*/*', 'ws://*/*', 'wss://*/*'],
     optional_host_permissions: ['<all_urls>'],
+    commands: {
+      'toggle-extension': {
+        description: 'Toggle the NativeMind side panel',
+        suggested_key: {
+          default: 'Ctrl+Shift+Y',
+          mac: 'Command+Shift+Y',
+        },
+      },
+    },
   },
 })
