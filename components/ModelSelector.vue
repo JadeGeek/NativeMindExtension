@@ -293,9 +293,10 @@ watch([modelList, modelListUpdating], ([modelList, updating]) => {
   }
 })
 
-watch([endpointType, selectedModel], async (newVal) => {
+// React only to explicit endpoint type changes to avoid duplicate fetches
+watch(endpointType, async (newEndpoint) => {
   // Skip update for web-llm as it uses static SUPPORTED_MODELS
-  if (newVal[0] === 'web-llm') return
+  if (newEndpoint === 'web-llm') return
   updateModelList()
 })
 

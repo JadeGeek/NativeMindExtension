@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { onMounted, ref, watch } from 'vue'
 
 import Checkbox from '@/components/Checkbox.vue'
 import Input from '@/components/Input.vue'
@@ -13,6 +14,7 @@ import { SettingsScrollTarget } from '@/types/scroll-targets'
 import { MIN_CONTEXT_WINDOW_SIZE } from '@/utils/constants'
 import { useI18n } from '@/utils/i18n'
 import { useLLMBackendStatusStore } from '@/utils/pinia-store/store'
+import { settings2bRpc } from '@/utils/rpc'
 import { getUserConfig } from '@/utils/user-config'
 
 import Block from '../../Block.vue'
@@ -25,6 +27,7 @@ defineProps<{
 
 const { t } = useI18n()
 const llmBackendStatusStore = useLLMBackendStatusStore()
+const { openaiConnectionStatus: connectionStatus } = storeToRefs(llmBackendStatusStore)
 const userConfig = await getUserConfig()
 const baseUrl = userConfig.llm.backends.openai.baseUrl.toRef()
 const apiKey = userConfig.llm.apiKey.toRef()
@@ -38,19 +41,16 @@ const { value: numCtx, guardedValue: guardedNumCtx, errorMessage: numCtxError } 
 })
 const enableNumCtx = userConfig.llm.backends.openai.enableNumCtx.toRef()
 const loading = ref(false)
-const connectionStatus = ref<'unconnected' | 'connected' | 'error'>('unconnected')
 
 const testConnection = async () => {
   loading.value = true
   try {
-    const success = await llmBackendStatusStore.updateOpenAIConnectionStatus()
-    connectionStatus.value = success ? 'connected' : 'error'
-    if (success) {
-      await llmBackendStatusStore.updateOpenAIModelList()
-    }
-    else {
+    await llmBackendStatusStore.updateOpenAIModelList()
+    const success = connectionStatus.value === 'connected'
+    if (!success) {
       llmBackendStatusStore.clearOpenAIModelList()
     }
+    settings2bRpc.updateSidepanelModelList()
     return success
   }
   finally {
@@ -62,6 +62,12 @@ watch([baseUrl, apiKey], () => {
   // ensure switching to OpenAI backend if user configures it explicitly
   if (endpointType.value === 'web-llm') return
   if (endpointType.value !== 'openai-compatible') endpointType.value = 'openai-compatible'
+})
+
+onMounted(async () => {
+  if (endpointType.value === 'openai-compatible') {
+    await testConnection()
+  }
 })
 </script>
 

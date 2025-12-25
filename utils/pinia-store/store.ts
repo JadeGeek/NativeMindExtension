@@ -124,9 +124,9 @@ export const useLLMBackendStatusStore = defineStore('llm-backend-status', () => 
   const updateOpenAIModelList = async (): Promise<OpenAICompatibleModelInfo[]> => {
     try {
       openaiModelListUpdating.value = true
-      const response = await rpc.getOpenAIModelList()
-      openaiModelList.value = response.models
-      openaiConnectionStatus.value = 'connected'
+      const { models, success } = await rpc.getOpenAIModelList()
+      openaiModelList.value = models
+      openaiConnectionStatus.value = success ? 'connected' : 'error'
       return openaiModelList.value
     }
     catch (error) {
@@ -262,15 +262,12 @@ export const useLLMBackendStatusStore = defineStore('llm-backend-status', () => 
 
   const updateModelList = async () => {
     logger.debug('Updating model list...')
-    // Always update both Ollama and LMStudio backends so users can see
-    // all available models when switching between backends in ModelSelector
+    // Always update backend lists so users can see all available models when switching
     // WebLLM doesn't need updating as it uses static SUPPORTED_MODELS
-    const userConfig = await getUserConfig()
-    const shouldUpdateOpenAI = userConfig.llm.endpointType.get() === 'openai-compatible'
     await Promise.allSettled([
       updateOllamaModelList(),
       updateLMStudioModelList(),
-      shouldUpdateOpenAI ? updateOpenAIModelList() : Promise.resolve(openaiModelList.value),
+      updateOpenAIModelList(),
     ])
     return modelList.value
   }
