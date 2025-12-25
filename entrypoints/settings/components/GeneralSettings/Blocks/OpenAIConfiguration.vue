@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 import Checkbox from '@/components/Checkbox.vue'
 import Input from '@/components/Input.vue'
@@ -45,9 +45,9 @@ const loading = ref(false)
 const testConnection = async () => {
   loading.value = true
   try {
-    await llmBackendStatusStore.updateOpenAIModelList()
+    const models = await llmBackendStatusStore.updateOpenAIModelList()
     const success = connectionStatus.value === 'connected'
-    if (!success) {
+    if (!success || models.length === 0) {
       llmBackendStatusStore.clearOpenAIModelList()
     }
     settings2bRpc.updateSidepanelModelList()
@@ -64,11 +64,12 @@ watch([baseUrl, apiKey], () => {
   if (endpointType.value !== 'openai-compatible') endpointType.value = 'openai-compatible'
 })
 
-onMounted(async () => {
-  if (endpointType.value === 'openai-compatible') {
+// Refresh status when the OpenAI block is opened and OpenAI is the active endpoint
+watch(open, async (isOpen) => {
+  if (isOpen) {
     await testConnection()
   }
-})
+}, { immediate: true })
 </script>
 
 <template>

@@ -61,8 +61,11 @@ const setupLMStudio = async () => {
 const testConnection = async () => {
   loading.value = true
   try {
-    await reScanLMStudio()
     const success = await llmBackendStatusStore.updateLMStudioConnectionStatus()
+    if (success && endpointType.value === 'web-llm') {
+      endpointType.value = 'lm-studio'
+      stopCheckConnection()
+    }
     success ? (await llmBackendStatusStore.updateLMStudioModelList()) : llmBackendStatusStore.clearLMStudioModelList()
     settings2bRpc.updateSidepanelModelList()
     return success

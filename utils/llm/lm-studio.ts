@@ -1,4 +1,4 @@
-import { DownloadProgressUpdate, LLM, LLMLoadModelConfig, LMStudioClient, ModelSearchResultDownloadOption } from '@lmstudio/sdk'
+import { DownloadProgressUpdate, LLM, LLMInfo, LLMLoadModelConfig, LMStudioClient, ModelSearchResultDownloadOption } from '@lmstudio/sdk'
 
 import Logger from '@/utils/logger'
 
@@ -23,19 +23,46 @@ async function getLMStudioClient() {
   return cachedGetLMStudioClient(baseUrl)
 }
 
-export async function getLocalModelList() {
-  try {
-    const lmStudio = await getLMStudioClient()
-    const models = await lmStudio.system.listDownloadedModels()
-    return { models: models.filter((m) => m.type === 'llm') }
+type LMStudioLLMModel = LLMInfo
+
+let inFlightLocalModelList: Promise<{ models: LMStudioLLMModel[], error?: string }> | null = null
+let inFlightKey: string | null = null
+let cachedLocalModelList: { models: LMStudioLLMModel[], error?: string, timestamp: number, key: string } | null = null
+const MODEL_LIST_TTL_MS = 5000
+
+export async function getLocalModelList(): Promise<{ models: LMStudioLLMModel[], error?: string }> {
+  const userConfig = await getUserConfig()
+  const baseUrl = userConfig.llm.backends.lmStudio.baseUrl.get()
+  const cacheKey = baseUrl
+
+  if (cachedLocalModelList && cachedLocalModelList.key === cacheKey && (Date.now() - cachedLocalModelList.timestamp) < MODEL_LIST_TTL_MS) {
+    return { models: cachedLocalModelList.models, error: cachedLocalModelList.error }
   }
-  catch (error) {
-    logger.error('Error fetching local model list:', error)
-    return {
-      models: [],
-      error: 'Failed to fetch local model list',
+  if (inFlightLocalModelList && inFlightKey === cacheKey) return inFlightLocalModelList
+
+  inFlightKey = cacheKey
+  const promise = (async () => {
+    try {
+      const lmStudio = await getLMStudioClient()
+      const models = await lmStudio.system.listDownloadedModels('llm')
+      cachedLocalModelList = { models, timestamp: Date.now(), key: cacheKey }
+      return cachedLocalModelList
     }
-  }
+    catch (error) {
+      logger.error('Error fetching local model list:', error)
+      const result = {
+        models: [],
+        error: 'Failed to fetch local model list',
+      }
+      cachedLocalModelList = { ...result, timestamp: Date.now(), key: cacheKey }
+      return result
+    }
+  })().finally(() => {
+    inFlightLocalModelList = null
+    inFlightKey = null
+  })
+  inFlightLocalModelList = promise
+  return promise
 }
 
 export async function getRunningModelList() {
@@ -129,7 +156,7 @@ export async function pullModel(options: { modelName: string, abortSignal?: Abor
 export async function testConnection(): Promise<boolean> {
   try {
     const lmStudio = await getLMStudioClient()
-    const _ = await lmStudio.system.getLMStudioVersion()
+    await lmStudio.system.getLMStudioVersion()
     return true
   }
   catch (error) {
