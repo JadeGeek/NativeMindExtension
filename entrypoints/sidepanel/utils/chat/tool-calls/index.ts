@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser'
 
+import type { SkillPermissionState } from '@/types/skill'
 import { SerializedElementInfo } from '@/types/tab'
 import { makeAbortable } from '@/utils/abort-controller'
 import { markdownSectionDiff } from '@/utils/diff'
@@ -7,6 +8,10 @@ import { useGlobalI18n } from '@/utils/i18n'
 import Logger from '@/utils/logger'
 import { makeIcon, makeRawHtmlTag } from '@/utils/markdown/content'
 import { useLLMBackendStatusStore } from '@/utils/pinia-store/store'
+import { getSkillByName } from '@/utils/skills'
+import { formatSkillError } from '@/utils/skills/errors'
+import { buildSkillMarkdown } from '@/utils/skills/parse'
+import { requestSkillPermission } from '@/utils/skills/permission-prompt'
 import { Tab } from '@/utils/tab'
 import { timeout } from '@/utils/timeout'
 import { isUrlEqual } from '@/utils/url'
@@ -142,6 +147,181 @@ export const executeFetchPage: AgentToolCallExecute<'fetch_page'> = async ({ par
       },
     }]
   }
+}
+
+export const executeSkillCall: AgentToolCallExecute<'skill_call'> = async ({ params, taskMessageModifier }) => {
+  const taskMsg = taskMessageModifier.addTaskMessage({ summary: `Loading skill "${params.name}"` })
+  taskMsg.icon = 'taskFetchPage'
+  const skill = await getSkillByName(params.name)
+  if (!skill || !skill.enabled) {
+    taskMsg.icon = 'warningColored'
+    taskMsg.summary = `Skill "${params.name}" not found or disabled`
+    return [{
+      type: 'tool-result',
+      results: {
+        status: 'failed',
+        skill_name: params.name,
+        error_message: 'Skill not found or disabled',
+      },
+    }]
+  }
+  taskMsg.summary = `Skill "${skill.name}" loaded`
+  const files = Array.isArray(skill.files) ? skill.files : []
+  return [{
+    type: 'tool-result',
+    results: {
+      status: 'completed',
+      skill_name: skill.name,
+      description: skill.description,
+      instructions: skill.body,
+      skill_markdown: buildSkillMarkdown(skill),
+      user_input: params.user_input ?? '',
+      allowed_tools: skill.allowedTools ?? '',
+      files: files.map((file) => ({
+        path: file.path,
+        encoding: file.encoding,
+        size: file.content.length.toString(),
+      })),
+    },
+  }]
+}
+
+export const executeSkillReadFile: AgentToolCallExecute<'skill_read_file'> = async ({ params, taskMessageModifier }) => {
+  const taskMsg = taskMessageModifier.addTaskMessage({ summary: `Reading "${params.path}" from "${params.name}"` })
+  taskMsg.icon = 'taskFetchPage'
+  const skill = await getSkillByName(params.name)
+  if (!skill || !skill.enabled) {
+    taskMsg.icon = 'warningColored'
+    taskMsg.summary = `Skill "${params.name}" not found or disabled`
+    return [{
+      type: 'tool-result',
+      results: {
+        status: 'failed',
+        skill_name: params.name,
+        error_message: 'Skill not found or disabled',
+      },
+    }]
+  }
+  const normalizedPath = params.path.replace(/^\//, '')
+  if (normalizedPath.includes('..')) {
+    taskMsg.icon = 'warningColored'
+    taskMsg.summary = `Invalid path "${normalizedPath}"`
+    return [{
+      type: 'tool-result',
+      results: {
+        status: 'failed',
+        skill_name: skill.name,
+        path: normalizedPath,
+        error_message: 'Invalid path',
+      },
+    }]
+  }
+  const file = skill.files.find((item) => item.path === normalizedPath)
+  if (!file) {
+    taskMsg.icon = 'warningColored'
+    taskMsg.summary = `File "${normalizedPath}" not found in "${skill.name}"`
+    return [{
+      type: 'tool-result',
+      results: {
+        status: 'failed',
+        skill_name: skill.name,
+        path: normalizedPath,
+        error_message: 'File not found',
+      },
+    }]
+  }
+  taskMsg.summary = `File "${normalizedPath}" loaded`
+  return [{
+    type: 'tool-result',
+    results: {
+      status: 'completed',
+      skill_name: skill.name,
+      path: normalizedPath,
+      encoding: file.encoding,
+      content: file.content,
+    },
+  }]
+}
+
+export const executeSkillRun: AgentToolCallExecute<'skill_run'> = async ({ params, taskMessageModifier, agentStorage }) => {
+  const taskMsg = taskMessageModifier.addTaskMessage({ summary: `Running skill "${params.name}"` })
+  taskMsg.icon = 'taskFetchPage'
+  const userConfig = await getUserConfig()
+  const permissions = userConfig.chat.skills.permissions.get() as Record<string, SkillPermissionState>
+  const skill = await getSkillByName(params.name)
+  const permission = permissions[params.name]
+  logger.info('skill permission scope check', {
+    name: params.name,
+    skillAllowedTools: skill?.allowedTools ?? '',
+    permissionAllowedTools: permission?.allowedTools ?? '',
+    approved: permission?.approved === true,
+  })
+  const hasScope = permission?.allowedTools === (skill?.allowedTools ?? '')
+  if (!permission?.approved || !hasScope) {
+    const approved = await requestSkillPermission({
+      name: params.name,
+      allowedTools: skill?.allowedTools ?? '',
+    })
+    if (!approved) {
+      taskMsg.icon = 'warningColored'
+      taskMsg.summary = `Skill "${params.name}" permission denied`
+      return [{
+        type: 'tool-result',
+        results: {
+          status: 'permission-required',
+          skill_name: params.name,
+          error_message: 'Skill permission denied',
+          permission_required: 'true',
+        },
+      }]
+    }
+    const nextPermissions: Record<string, SkillPermissionState> = {
+      ...permissions,
+      [params.name]: { approved: true, approvedAt: Date.now(), allowedTools: skill?.allowedTools ?? '' },
+    }
+    userConfig.chat.skills.permissions.set(nextPermissions)
+  }
+  const tabs = agentStorage.getAllTabs()
+  const currentTab = tabs[0]?.value?.tabId
+  const { s2bRpc } = await import('@/utils/rpc')
+  const result = await s2bRpc.skillRun({
+    name: params.name,
+    scriptPath: params.script_path,
+    args: params.args ?? '',
+    tabId: currentTab,
+  }).catch((error) => ({ status: 'failed', error })) as { status: string, error?: unknown, errorDetails?: unknown, result?: unknown, allowedTools?: string }
+
+  let errorMessage = typeof result.error === 'string' ? result.error : ''
+  let errorDetails = typeof result.errorDetails === 'string' ? result.errorDetails : ''
+  if (result.error && typeof result.error !== 'string') {
+    const formatted = formatSkillError(result.error)
+    errorMessage = formatted.message
+    errorDetails = errorDetails || formatted.details
+  }
+
+  if (result.status !== 'completed') {
+    taskMsg.icon = 'warningColored'
+    const summaryError = errorMessage || result.status
+    taskMsg.summary = `Skill "${params.name}" failed: ${summaryError}`
+    if (errorDetails) {
+      taskMsg.details = { content: errorDetails, expanded: false }
+    }
+  }
+  else {
+    taskMsg.summary = `Skill "${params.name}" completed`
+  }
+
+  return [{
+    type: 'tool-result',
+    results: {
+      status: result.status,
+      skill_name: params.name,
+      result: typeof result.result === 'string' ? result.result : JSON.stringify(result.result ?? {}),
+      error_message: errorMessage,
+      error_details: errorDetails,
+      permission_required: result.status === 'permission-required' ? 'true' : 'false',
+    },
+  }]
 }
 
 export const executeViewTab: AgentToolCallExecute<'view_tab'> = async ({ params, taskMessageModifier, agentStorage, abortSignal, hooks }) => {

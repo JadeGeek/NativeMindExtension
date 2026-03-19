@@ -79,6 +79,18 @@
             }"
           >
             <div class="h-max min-h-[48px] place-items-center">
+              <div
+                v-if="selectedSkill"
+                class="mb-2 flex items-center gap-2 rounded-full bg-bg-hover px-2 py-1 text-xs text-text-secondary w-fit"
+              >
+                <span class="font-medium">/ {{ selectedSkill.name }}</span>
+                <button
+                  class="text-text-tertiary hover:text-text-primary"
+                  @click="clearSelectedSkill"
+                >
+                  ×
+                </button>
+              </div>
               <AutoExpandTextArea
                 v-model="userInput"
                 maxlength="2000"
@@ -96,6 +108,24 @@
               />
             </div>
           </ScrollContainer>
+          <div
+            v-if="showSkillPicker && filteredSkills.length"
+            class="absolute left-3 right-3 bottom-11 z-50 rounded-md border border-border-strong bg-bg-secondary shadow-lg max-h-48 overflow-auto"
+          >
+            <button
+              v-for="skill in filteredSkills"
+              :key="skill.name"
+              class="w-full text-left px-3 py-2 hover:bg-bg-hover"
+              @click="selectSkill(skill.name)"
+            >
+              <div class="text-sm font-medium">
+                /{{ skill.name }}
+              </div>
+              <div class="text-xs text-text-secondary line-clamp-2">
+                {{ skill.description }}
+              </div>
+            </button>
+          </div>
           <!-- Toolbar -->
           <div class="absolute bottom-0 left-0 right-0 flex flex-row justify-between w-full h-9 pl-3 pr-1.5 items-center">
             <div class="flex grow items-center gap-1">
@@ -139,7 +169,7 @@
 
 <script setup lang="ts">
 import { useElementBounding } from '@vueuse/core'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, type Ref, ref, watch } from 'vue'
 
 import IconSendFill from '@/assets/icons/send-fill.svg?component'
 import IconStop from '@/assets/icons/stop.svg?component'
@@ -148,6 +178,7 @@ import ExhaustiveError from '@/components/ExhaustiveError.vue'
 import ModelSelector from '@/components/ModelSelector.vue'
 import ScrollContainer from '@/components/ScrollContainer.vue'
 import Button from '@/components/ui/Button.vue'
+import type { SkillDefinition } from '@/types/skill'
 import { FileGetter } from '@/utils/file'
 import { useI18n } from '@/utils/i18n'
 import { isGptOssModel } from '@/utils/llm/reasoning'
@@ -194,9 +225,50 @@ defineExpose({
 const userConfig = await getUserConfig()
 const currentModel = userConfig.llm.model.toRef()
 const showReasoningEffortSelector = computed(() => isGptOssModel(currentModel.value))
+const skillsRef = userConfig.chat.skills.items.toRef() as Ref<SkillDefinition[]>
 
 const chat = await Chat.getInstance()
 const contextAttachmentStorage = chat.contextAttachmentStorage
+
+const skillQuery = ref('')
+const showSkillPicker = ref(false)
+const selectedSkillName = ref<string | null>(null)
+const selectedSkill = computed(() => {
+  return skillsRef.value.find((skill) => skill.name === selectedSkillName.value) ?? null
+})
+const filteredSkills = computed(() => {
+  const query = skillQuery.value.trim()
+  return skillsRef.value
+    .filter((skill) => skill.enabled)
+    .filter((skill) => {
+      if (!query) return true
+      return skill.name.includes(query) || skill.description.toLowerCase().includes(query.toLowerCase())
+    })
+})
+
+const clearSelectedSkill = () => {
+  selectedSkillName.value = null
+}
+
+const selectSkill = (name: string) => {
+  selectedSkillName.value = name
+  showSkillPicker.value = false
+  skillQuery.value = ''
+  userInput.value = userInput.value.replace(/(?:^|\s)\/[a-z0-9-]*$/, '').trimStart()
+}
+
+watch(userInput, (value) => {
+  if (isComposing.value) return
+  const match = value.match(/(?:^|\s)\/([a-z0-9-]*)$/)
+  if (match && !selectedSkillName.value) {
+    showSkillPicker.value = true
+    skillQuery.value = match[1]
+  }
+  else {
+    showSkillPicker.value = false
+    skillQuery.value = ''
+  }
+})
 
 initChatSideEffects()
 
@@ -242,7 +314,9 @@ const actionEventHandler = Chat.createActionEventHandler((actionEvent) => {
 })
 
 const allowAsk = computed(() => {
-  return !chat.isAnswering() && userInput.value.trim().length > 0
+  if (chat.isAnswering()) return false
+  if (selectedSkillName.value) return true
+  return userInput.value.trim().length > 0
 })
 
 const onStartEdit = (messageId: string) => {
@@ -355,6 +429,12 @@ const onStop = () => {
 
 const ask = async () => {
   if (!allowAsk.value) return
+  if (selectedSkillName.value) {
+    await chat.askWithSkill(selectedSkillName.value, userInput.value)
+    clearSelectedSkill()
+    userInput.value = ''
+    return
+  }
   chat.ask(userInput.value)
   userInput.value = ''
 }

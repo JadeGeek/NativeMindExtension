@@ -15,12 +15,15 @@ import mime from 'mime'
 import { onBeforeUnmount, useTemplateRef, watch } from 'vue'
 import { browser } from 'wxt/browser'
 
+import { useConfirm } from '@/composables/useConfirm'
 import { useZIndex } from '@/composables/useZIndex'
 import { ContextMenuId } from '@/utils/context-menu'
 import { FileGetter } from '@/utils/file'
+import { useGlobalI18n } from '@/utils/i18n'
 import logger from '@/utils/logger'
 import { UserPrompt } from '@/utils/prompts/helpers'
 import { registerSidepanelRpcEvent } from '@/utils/rpc/sidepanel-fns'
+import { registerSkillPermissionHandler } from '@/utils/skills/permission-prompt'
 import { sleep } from '@/utils/sleep'
 import { extractFileNameFromUrl } from '@/utils/url'
 import { getUserConfig, processGmailTemplate } from '@/utils/user-config'
@@ -36,6 +39,21 @@ initContextMenu()
 const mainRef = useTemplateRef('mainRef')
 const { index: onboardingPanelZIndex } = useZIndex('settings')
 const userConfig = await getUserConfig()
+const confirm = useConfirm()
+
+registerSkillPermissionHandler(async ({ name, allowedTools }) => {
+  const { t } = await useGlobalI18n()
+  return await new Promise<boolean>((resolve) => {
+    confirm({
+      message: t('settings.chat.skills.permission_prompt', {
+        name,
+        tools: allowedTools || t('settings.chat.skills.permission_tools_empty'),
+      }),
+      onConfirm() { resolve(true) },
+      onCancel() { resolve(false) },
+    })
+  })
+})
 
 const cleanupGmailActionEvent = registerSidepanelRpcEvent('gmailAction', async (e) => {
   const { action, data } = e

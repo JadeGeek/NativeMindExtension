@@ -4,6 +4,7 @@ import dayjs from '@/utils/time'
 
 import { nonNullable } from '../array'
 import logger from '../logger'
+import { listSkillMetadata } from '../skills'
 import { getUserConfig } from '../user-config'
 import { definePrompt, renderPrompt, TagBuilder, TextBuilder, UserPrompt } from './helpers'
 
@@ -153,7 +154,29 @@ ${imageContextBuilder}
 
 export const chatWithEnvironment = definePrompt(async (question: string, environmentDetails?: string | undefined, images?: Base64ImageData[] | undefined) => {
   const userConfig = await getUserConfig()
-  const system = userConfig.chat.systemPrompt.get()
+  const systemBase = userConfig.chat.systemPrompt.get()
+  const availableSkills = await listSkillMetadata()
+  const skillGuidance = `
+# SKILL USAGE
+- If a task matches an available skill, call skill_call with the skill name.
+- After activation, follow SKILL.md instructions and use skill_read_file for referenced files when needed.`
+  const skillBlock = availableSkills.length
+    ? `${skillGuidance}
+
+<available_skills>
+${availableSkills
+  .filter((skill) => skill.enabled)
+  .map((skill) => {
+    return `<skill>
+  <name>${skill.name}</name>
+  <description>${skill.description}</description>
+  <location>skill://${skill.name}/SKILL.md</location>
+</skill>`
+  })
+  .join('\n')}
+</available_skills>`
+    : ''
+  const system = [systemBase, skillBlock].filter((part) => part.trim().length > 0).join('\n\n')
   const userMessageTagBuilder = new TagBuilder('user_message').insertContent(question)
 
   const user = renderPrompt`

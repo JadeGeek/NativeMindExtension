@@ -89,6 +89,7 @@
     "highlight.js": "^11.11.1",
     "idb": "^8.0.3",
     "jimp": "^1.6.0",
+    "jszip": "^3.10.1",
     "katex": "^0.16.22",
     "lit": "^3.3.1",
     "lru-cache": "^11.1.0",
@@ -126,6 +127,7 @@
     "vue-router": "^4.5.1",
     "vue-shadow-dom": "^4.2.0",
     "zod": "^3.24.4",
+    "yaml": "^2.8.0",
     "zod-from-json-schema": "0.0.5"
   },
   "devDependencies": {

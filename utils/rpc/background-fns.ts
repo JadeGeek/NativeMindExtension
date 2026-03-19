@@ -7,6 +7,7 @@ import { convertJsonSchemaToZod, JSONSchema } from 'zod-from-json-schema'
 
 import { ChatHistoryV1, ContextAttachmentStorage } from '@/types/chat'
 import type { ReasoningOption } from '@/types/reasoning'
+import { SkillDefinition, SkillPermissionState } from '@/types/skill'
 import { TabInfo } from '@/types/tab'
 import logger from '@/utils/logger'
 
@@ -14,7 +15,7 @@ import { BackgroundCacheServiceManager } from '../../entrypoints/background/serv
 import { BackgroundChatHistoryServiceManager } from '../../entrypoints/background/services/chat-history-service'
 import { BackgroundWindowManager } from '../../entrypoints/background/services/window-manager'
 import { MODELS_NOT_SUPPORTED_FOR_STRUCTURED_OUTPUT } from '../constants'
-import { ContextMenuManager } from '../context-menu'
+import { ContextMenuId, ContextMenuManager } from '../context-menu'
 import { AiSDKError, AppError, CreateTabStreamCaptureError, FetchError, fromError, GenerateObjectSchemaError, ModelRequestError, UnknownError } from '../error'
 import { parsePartialJson } from '../json/parser/parse-partial-json'
 import * as lmStudioUtils from '../llm/lm-studio'
@@ -27,6 +28,9 @@ import { getWebLLMEngine, WebLLMSupportedModel } from '../llm/web-llm'
 import { parsePdfFileOfUrl } from '../pdf'
 import { openAndFetchUrlsContent, searchWebsites } from '../search'
 import { showSettingsForBackground } from '../settings'
+import { formatSkillError } from '../skills/errors'
+import { getSkillFiles } from '../skills/files'
+import { parseAllowedTools } from '../skills/permissions'
 import { sleep } from '../sleep'
 import { TranslationEntry } from '../translation-cache'
 import { getUserConfig } from '../user-config'
@@ -799,6 +803,263 @@ function ping() {
   return 'pong'
 }
 
+async function reloadTabAndWait(tabId: number, timeoutMs = 8000) {
+  const tab = await browser.tabs.get(tabId)
+  if (!tab?.url || !tab.url.startsWith('http')) {
+    throw new Error('Tab is not reloadable for skill retry')
+  }
+  await browser.tabs.reload(tabId)
+  await new Promise<void>((resolve, reject) => {
+    const timeout = self.setTimeout(() => {
+      browser.tabs.onUpdated.removeListener(handleUpdate)
+      reject(new Error('Timed out waiting for tab reload'))
+    }, timeoutMs)
+    const handleUpdate = (updatedTabId: number, info: Browser.tabs.TabChangeInfo) => {
+      if (updatedTabId !== tabId) return
+      if (info.status === 'complete') {
+        self.clearTimeout(timeout)
+        browser.tabs.onUpdated.removeListener(handleUpdate)
+        resolve()
+      }
+    }
+    browser.tabs.onUpdated.addListener(handleUpdate)
+  })
+}
+
+async function skillInvokeSwApi(request: { name: string, tool: string, args: unknown[] }) {
+  const userConfig = await getUserConfig()
+  const permissionMap = userConfig.chat.skills.permissions.get() as Record<string, SkillPermissionState>
+  const permission = permissionMap[request.name]
+  if (!permission?.approved) {
+    throw new Error('Skill permissions not approved')
+  }
+  const skills = userConfig.chat.skills.items.get() as SkillDefinition[]
+  const skill = skills.find((item) => item.name === request.name)
+  if (!skill) {
+    throw new Error('Skill not found')
+  }
+  const allowedTools = parseAllowedTools(skill.allowedTools)
+  const allow = (ok: boolean, label: string) => {
+    if (!ok) throw new Error(`Skill not allowed to use ${label}`)
+  }
+  switch (request.tool) {
+    case 'fetchText': {
+      allow(allowedTools.sw.fetch, 'SW fetch')
+      const [url, init] = request.args as [string, RequestInit | undefined]
+      return await fetchAsText(url, init)
+    }
+    case 'getAllTabs': {
+      allow(allowedTools.sw.tabs, 'SW tabs')
+      return await getAllTabs()
+    }
+    case 'getTabInfoById': {
+      allow(allowedTools.sw.tabs, 'SW tabs')
+      const [tabId] = request.args as [number]
+      return await getTabInfoByTabId(tabId)
+    }
+    case 'storageGet': {
+      allow(allowedTools.sw.storage, 'SW storage')
+      const [key] = request.args as [string]
+      return await browser.storage.local.get(key)
+    }
+    case 'storageSet': {
+      allow(allowedTools.sw.storage, 'SW storage')
+      const [key, value] = request.args as [string, unknown]
+      await browser.storage.local.set({ [key]: value })
+      return { success: true }
+    }
+    case 'contextMenuCreate': {
+      allow(allowedTools.sw.contextMenu, 'SW context menu')
+      const [id, props] = request.args as Parameters<ContextMenuManager['createContextMenu']>
+      return await ContextMenuManager.getInstance().then((manager) => manager.createContextMenu(id as ContextMenuId, props))
+    }
+    case 'contextMenuUpdate': {
+      allow(allowedTools.sw.contextMenu, 'SW context menu')
+      const [id, props] = request.args as Parameters<ContextMenuManager['updateContextMenu']>
+      return await ContextMenuManager.getInstance().then((manager) => manager.updateContextMenu(id as ContextMenuId, props))
+    }
+    case 'contextMenuDelete': {
+      allow(allowedTools.sw.contextMenu, 'SW context menu')
+      const [menuId] = request.args as [Parameters<ContextMenuManager['deleteContextMenu']>[0]]
+      return await ContextMenuManager.getInstance().then((manager) => manager.deleteContextMenu(menuId as ContextMenuId))
+    }
+    default:
+      throw new Error(`Unsupported skill SW tool: ${request.tool}`)
+  }
+}
+
+async function skillInvokeDomApi(request: { name: string, tool: string, args: unknown[], tabId: number }) {
+  const userConfig = await getUserConfig()
+  const permissionMap = userConfig.chat.skills.permissions.get() as Record<string, SkillPermissionState>
+  const permission = permissionMap[request.name]
+  if (!permission?.approved) {
+    throw new Error('Skill permissions not approved')
+  }
+  const skills = userConfig.chat.skills.items.get() as SkillDefinition[]
+  const skill = skills.find((item) => item.name === request.name)
+  if (!skill) {
+    throw new Error('Skill not found')
+  }
+  const allowedTools = parseAllowedTools(skill.allowedTools)
+  const readTools = new Set(['querySelector', 'querySelectorAll', 'getTextList', 'getText', 'getAttribute', 'getDocumentHtml', 'getWindowJson', 'getWindowValue'])
+  const writeTools = new Set(['setText', 'click', 'clickByText', 'setValue', 'setAttribute'])
+  if (readTools.has(request.tool) && !allowedTools.dom.read) {
+    throw new Error('Skill not allowed to use DOM read')
+  }
+  if (writeTools.has(request.tool) && !allowedTools.dom.write) {
+    throw new Error('Skill not allowed to use DOM write')
+  }
+  const invoke = () => {
+    return bgBroadcastRpc.skillDomInvoke({
+      _toTab: request.tabId,
+      tool: request.tool,
+      args: request.args,
+    })
+  }
+  try {
+    return await invoke()
+  }
+  catch (error) {
+    const message = String(error)
+    if (!message.includes('Receiving end does not exist')) {
+      throw error
+    }
+    await reloadTabAndWait(request.tabId)
+    return await invoke()
+  }
+}
+
+async function skillRun(params: { name: string, scriptPath?: string, args?: unknown, tabId?: number }) {
+  const userConfig = await getUserConfig()
+  const skills = userConfig.chat.skills.items.get() as SkillDefinition[]
+  const permissions = userConfig.chat.skills.permissions.get() as Record<string, SkillPermissionState>
+  const skill = skills.find((item) => item.name === params.name)
+  if (!skill || !skill.enabled) {
+    return { status: 'failed', error: 'Skill not found or disabled' }
+  }
+  const permission: SkillPermissionState | undefined = permissions[skill.name]
+  const hasScope = permission?.allowedTools === (skill.allowedTools ?? '')
+  logger.info('skill permission scope check', {
+    name: skill.name,
+    skillAllowedTools: skill.allowedTools ?? '',
+    permissionAllowedTools: permission?.allowedTools ?? '',
+    approved: permission?.approved === true,
+  })
+  if (!permission?.approved || !hasScope) {
+    return { status: 'permission-required', allowedTools: skill.allowedTools ?? '' }
+  }
+
+  if (!params.scriptPath && !skill.entry) {
+    return { status: 'failed', error: 'Skill has no entry script' }
+  }
+  const files = await getSkillFiles(skill.name)
+  const fileMap = new Set(files.map((file) => file.path))
+  const scriptPath = skill.entry
+  if (params.scriptPath && params.scriptPath !== skill.entry) {
+    logger.warn('Ignoring scriptPath from LLM, using skill.entry', { scriptPath: params.scriptPath, entry: skill.entry })
+  }
+  if (!scriptPath || !fileMap.has(scriptPath)) {
+    return { status: 'failed', error: 'Skill has no entry script' }
+  }
+  const scriptFile = files.find((file) => file.path === scriptPath)
+  if (!scriptFile) {
+    return { status: 'failed', error: `Script not found: ${scriptPath}` }
+  }
+  if (scriptFile.encoding !== 'utf-8') {
+    return { status: 'failed', error: `Unsupported script encoding: ${scriptFile.encoding}` }
+  }
+
+  const allowedTools = parseAllowedTools(skill.allowedTools)
+  let tabId = params.tabId
+  let tabUrl = ''
+  if (!tabId) {
+    const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true })
+    tabId = activeTab?.id
+    tabUrl = activeTab?.url ?? ''
+  }
+  else {
+    try {
+      const tab = await browser.tabs.get(tabId)
+      tabUrl = tab?.url ?? ''
+    }
+    catch {
+      tabUrl = ''
+    }
+  }
+  if (!tabId) {
+    return { status: 'failed', error: 'No active tab available for skill execution' }
+  }
+  const sidepanelStatus = await b2sRpc.getSidepanelStatus().catch((error) => {
+    logger.error('Failed to get sidepanel status', error)
+    return null
+  })
+  if (!sidepanelStatus?.loaded) {
+    logger.warn('Sidepanel status unavailable or not loaded; attempting sandbox run anyway.')
+  }
+  logger.debug('skillRun: dispatching to sandbox', { name: skill.name, tabId })
+  let args = params.args
+  if (!args || typeof args !== 'object') {
+    args = tabUrl ? { url: tabUrl } : params.args
+  }
+  else if (tabUrl && !('url' in (args as Record<string, unknown>))) {
+    args = { ...(args as Record<string, unknown>), url: tabUrl }
+  }
+  const runSandbox = () => b2sRpc.runSkillInSandbox({
+    name: skill.name,
+    source: scriptFile.content,
+    args,
+    allowedTools,
+    tabId,
+  })
+  const isBirpcTimeout = (error: unknown) => {
+    const formatted = formatSkillError(error)
+    const details = formatted.details || JSON.stringify(error ?? {})
+    return details.includes('timeout on calling')
+  }
+  let response: unknown
+  try {
+    response = await runSandbox()
+  }
+  catch (error) {
+    if (isBirpcTimeout(error)) {
+      logger.warn('Skill sandbox call timed out, retrying once.')
+      await sleep(300)
+      try {
+        response = await runSandbox()
+      }
+      catch (retryError) {
+        const formatted = formatSkillError(retryError)
+        const errorDetails = formatted.details || JSON.stringify({ message: formatted.message })
+        logger.error('Skill run failed', { error: formatted.message, errorDetails })
+        response = { error: formatted.message, errorDetails }
+      }
+    }
+    else {
+      const formatted = formatSkillError(error)
+      const errorDetails = formatted.details || JSON.stringify({ message: formatted.message })
+      logger.error('Skill run failed', { error: formatted.message, errorDetails })
+      response = { error: formatted.message, errorDetails }
+    }
+  }
+  logger.debug('skillRun: sandbox response', response)
+  if (response && typeof response === 'object' && 'error' in response) {
+    const rawError = (response as { error?: unknown }).error
+    const formatted = typeof rawError === 'string' || rawError === undefined
+      ? { message: rawError ?? 'Skill run failed', details: undefined as string | undefined }
+      : formatSkillError(rawError)
+    const errorDetails = typeof (response as { errorDetails?: unknown }).errorDetails === 'string'
+      ? (response as { errorDetails?: string }).errorDetails
+      : typeof (response as { errorDetail?: unknown }).errorDetail === 'string'
+        ? (response as { errorDetail?: string }).errorDetail
+        : formatted.details
+    const safeDetails = typeof errorDetails === 'string' && errorDetails !== '{}'
+      ? errorDetails
+      : JSON.stringify({ error: rawError ?? formatted.message, note: 'missing errorDetail from skill' })
+    return { status: 'failed', error: formatted.message, errorDetails: safeDetails }
+  }
+  return { status: 'completed', result: response }
+}
+
 // Translation cache functions
 async function cacheGetEntry(id: string) {
   try {
@@ -912,7 +1173,9 @@ async function cacheGetDebugInfo() {
 }
 
 async function updateSidepanelModelList() {
-  b2sRpc.emit('updateModelList')
+  b2sRpc.emit('updateModelList').catch((error) => {
+    logger.warn('emit updateModelList failed', error)
+  })
   return true
 }
 
@@ -1092,7 +1355,9 @@ async function forwardGmailAction(action: 'summary' | 'reply' | 'compose', data:
     // await showSidepanel()
 
     // Forward Gmail action to sidepanel
-    b2sRpc.emit('gmailAction', { action, data, tabInfo })
+    b2sRpc.emit('gmailAction', { action, data, tabInfo }).catch((error) => {
+      logger.warn('emit gmailAction failed', error)
+    })
     return { success: true }
   }
   catch (error) {
@@ -1103,7 +1368,9 @@ async function forwardGmailAction(action: 'summary' | 'reply' | 'compose', data:
 
 async function forwardSelectionText(tabId: number, selectedText: string) {
   try {
-    b2sRpc.emit('selectionChanged', { tabId, selectedText })
+    b2sRpc.emit('selectionChanged', { tabId, selectedText }).catch((error) => {
+      logger.warn('emit selectionChanged failed', error)
+    })
     return { success: true }
   }
   catch (error) {
@@ -1188,5 +1455,8 @@ export const backgroundFunctions = {
   forwardGmailAction,
   // Selected Text
   forwardSelectionText,
+  skillRun,
+  skillInvokeDomApi,
+  skillInvokeSwApi,
 }
   ; (self as unknown as { backgroundFunctions: unknown }).backgroundFunctions = backgroundFunctions

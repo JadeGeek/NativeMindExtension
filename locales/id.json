@@ -8,10 +8,6 @@
       "used_model": "Menggunakan {model}"
     },
     "temperature": {
-      "title": "Temperatur",
-      "helper": "Nilai lebih tinggi membuat respons lebih acak"
-    },
-    "temperature": {
       "label": "Temp",
       "helper": "Nilai lebih tinggi membuat respons lebih acak",
       "reset": "Atur ulang"
@@ -342,6 +338,26 @@
         "title": "Tindakan Cepat",
         "reset_to_default": "Atur Ulang ke Default",
         "reset_to_default_confirm": "Apakah Anda yakin ingin mengatur ulang Tindakan Cepat ke nilai default?"
+      },
+      "skills": {
+        "title": "Skills",
+        "import": "Import Skill",
+        "export": "Export",
+        "delete": "Delete",
+        "empty": "No skills imported yet.",
+        "approve": "Approve",
+        "revoke": "Revoke",
+        "entry": "Entry",
+        "entry_none": "none",
+        "entry_missing": "missing",
+        "files": "Files",
+        "files_view": "View files",
+        "files_empty": "no files",
+        "allowed_tools": "Allowed tools",
+        "import_failed": "Failed to import skill: {error}",
+        "import_success": "Imported {count} files: {files}",
+        "permission_prompt": "Skill \"{name}\" requests access to: {tools}. Approve?",
+        "permission_tools_empty": "no declared tools"
       }
     },
     "common": {

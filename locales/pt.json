@@ -8,10 +8,6 @@
       "used_model": "Usado {model}"
     },
     "temperature": {
-      "title": "Temperatura",
-      "helper": "Valores mais altos tornam as respostas mais aleatórias"
-    },
-    "temperature": {
       "label": "Temp",
       "helper": "Valores mais altos tornam as respostas mais aleatórias",
       "reset": "Redefinir"
@@ -342,6 +338,26 @@
         "title": "Ações Rápidas",
         "reset_to_default": "Redefinir para Padrão",
         "reset_to_default_confirm": "Tem certeza de que deseja redefinir as Ações Rápidas para os valores padrão?"
+      },
+      "skills": {
+        "title": "Skills",
+        "import": "Import Skill",
+        "export": "Export",
+        "delete": "Delete",
+        "empty": "No skills imported yet.",
+        "approve": "Approve",
+        "revoke": "Revoke",
+        "entry": "Entry",
+        "entry_none": "none",
+        "entry_missing": "missing",
+        "files": "Files",
+        "files_view": "View files",
+        "files_empty": "no files",
+        "allowed_tools": "Allowed tools",
+        "import_failed": "Failed to import skill: {error}",
+        "import_success": "Imported {count} files: {files}",
+        "permission_prompt": "Skill \"{name}\" requests access to: {tools}. Approve?",
+        "permission_tools_empty": "no declared tools"
       }
     },
     "common": {

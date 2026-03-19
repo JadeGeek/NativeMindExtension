@@ -91,6 +91,10 @@ export default defineConfig({
     declarative_net_request: IS_FIREFOX ? { rule_resources: [{ id: 'ruleset_1', enabled: true, path: 'rules.json' }] } : undefined,
     content_security_policy: {
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'self';`,
+      sandbox: `sandbox allow-scripts; script-src 'self' 'unsafe-eval'; object-src 'self';`,
+    },
+    sandbox: {
+      pages: ['skill-sandbox.html'],
     },
     // Include the action manifest key so action click + keyboard shortcuts can open the side panel
     action: { default_title: EXTENSION_SHORT_NAME },

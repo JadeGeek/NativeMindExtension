@@ -77,7 +77,7 @@ Enhancement suggestions are tracked as GitHub issues. Create an issue on the rep
 
 ### JavaScript/TypeScript Styleguide
 
-* Use semicolons
+* Do not use semicolons
 * 2 spaces for indentation
 * Prefer `const` over `let`. Never use `var`
 * Prefer template literals over string concatenation

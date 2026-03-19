@@ -2,9 +2,26 @@ import { CoreMessage } from 'ai'
 import EventEmitter from 'events'
 import { type Ref, ref, toRaw, toRef, watch } from 'vue'
 
-import type { ActionMessageV1, ActionTypeV1, ActionV1, AgentMessageV1, AgentTaskGroupMessageV1, AgentTaskMessageV1, AssistantMessageV1, ChatHistoryV1, ChatList, HistoryItemV1, TaskMessageV1, UserMessageV1 } from '@/types/chat'
+import type {
+  ActionMessageV1,
+  ActionTypeV1,
+  ActionV1,
+  AgentMessageV1,
+  AgentTaskGroupMessageV1,
+  AgentTaskMessageV1,
+  AssistantMessageV1,
+  ChatHistoryV1,
+  ChatList,
+  HistoryItemV1,
+  TaskMessageV1,
+  UserMessageV1,
+} from '@/types/chat'
 import { ContextAttachmentStorage } from '@/types/chat'
-import { normalizeReasoningPreference, StoredReasoningPreference } from '@/types/reasoning'
+import {
+  normalizeReasoningPreference,
+  StoredReasoningPreference,
+} from '@/types/reasoning'
+// import type { SkillPermissionState } from '@/types/skill'
 import { nonNullable } from '@/utils/array'
 import { debounce } from '@/utils/debounce'
 import { useGlobalI18n } from '@/utils/i18n'
@@ -15,6 +32,9 @@ import { chatWithEnvironment, EnvironmentDetailsBuilder } from '@/utils/prompts'
 import { UserPrompt } from '@/utils/prompts/helpers'
 import { s2bRpc } from '@/utils/rpc'
 import { registerSidepanelRpcEvent } from '@/utils/rpc/sidepanel-fns'
+import { getSkillByName } from '@/utils/skills'
+import { buildSkillActivationContext } from '@/utils/skills/activate'
+// import { requestSkillPermission } from '@/utils/skills/permission-prompt'
 import { pickByRoles } from '@/utils/tab-store/history'
 import { getUserConfig } from '@/utils/user-config'
 
@@ -23,14 +43,27 @@ import { AgentStorage } from '../agent/strorage'
 import { initCurrentModel, isCurrentModelReady } from '../llm'
 import { makeMarkdownIcon } from '../markdown/content'
 import { getDocumentContentOfTabs } from '../tabs'
-import { executeFetchPage, executePageClick, executeSearchOnline, executeViewImage, executeViewPdf, executeViewTab } from './tool-calls'
+import {
+  executeFetchPage,
+  executePageClick,
+  executeSearchOnline,
+  executeSkillCall,
+  executeSkillReadFile,
+  executeSkillRun,
+  executeViewImage,
+  executeViewPdf,
+  executeViewTab,
+} from './tool-calls'
 
 const log = logger.child('chat')
 
 export type MessageIdScope = 'quickActions' | 'welcomeMessage'
 
 export class ReactiveHistoryManager extends EventEmitter {
-  public temporaryModelOverride: { model: string, endpointType: string } | null = null
+  public temporaryModelOverride: {
+    model: string
+    endpointType: string
+  } | null = null
 
   constructor(public chatHistory: Ref<ChatHistoryV1>) {
     super()
@@ -42,22 +75,25 @@ export class ReactiveHistoryManager extends EventEmitter {
   }
 
   private cleanUp(history: HistoryItemV1[] = this.history.value) {
-    const newHistory = history.filter((item) => item.done).map((item) => {
-      if (item.role === 'task' && item.subTasks) {
-        this.cleanUp(item.subTasks)
-      }
-      if (item.role === 'agent-task-group' && item.tasks) {
-        // if task-group not done, remove the group
-        item.tasks = item.tasks.filter((task) => task.done)
-      }
-      return item
-    })
+    const newHistory = history
+      .filter((item) => item.done)
+      .map((item) => {
+        if (item.role === 'task' && item.subTasks) {
+          this.cleanUp(item.subTasks)
+        }
+        if (item.role === 'agent-task-group' && item.tasks) {
+          // if task-group not done, remove the group
+          item.tasks = item.tasks.filter((task) => task.done)
+        }
+        return item
+      })
     history.length = 0
     history.push(...newHistory)
   }
 
   generateId(scope?: MessageIdScope) {
-    const randomId = Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
+    const randomId
+      = Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
     return scope ? `${scope}-${randomId}` : randomId
   }
 
@@ -74,11 +110,16 @@ export class ReactiveHistoryManager extends EventEmitter {
   }
 
   // this method will not change the underlying history, it will just return a new array of messages
-  getLLMMessages(extra: { system?: string, user?: UserPrompt, lastUser?: UserPrompt } = {}) {
+  getLLMMessages(
+    extra: { system?: string, user?: UserPrompt, lastUser?: UserPrompt } = {},
+  ) {
     const systemMessage = extra.system
     const userMessage = extra.user
     const lastUserMessage = extra.lastUser
-    const fullHistory = pickByRoles(this.history.value.filter((m) => m.done), ['assistant', 'user', 'system']).map((item) => ({
+    const fullHistory = pickByRoles(
+      this.history.value.filter((m) => m.done),
+      ['assistant', 'user', 'system'],
+    ).map((item) => ({
       role: item.role,
       content: item.content,
     })) as CoreMessage[]
@@ -160,8 +201,11 @@ export class ReactiveHistoryManager extends EventEmitter {
 
   async appendAssistantMessage(content: string = '') {
     const userConfig = await getUserConfig()
-    const model = this.temporaryModelOverride?.model ?? userConfig.llm.model.get()
-    const endpointType = this.temporaryModelOverride?.endpointType ?? userConfig.llm.endpointType.get()
+    const model
+      = this.temporaryModelOverride?.model ?? userConfig.llm.model.get()
+    const endpointType
+      = this.temporaryModelOverride?.endpointType
+        ?? userConfig.llm.endpointType.get()
 
     this.history.value.push({
       id: this.generateId(),
@@ -179,8 +223,11 @@ export class ReactiveHistoryManager extends EventEmitter {
 
   async appendAgentMessage(content: string = '') {
     const userConfig = await getUserConfig()
-    const model = this.temporaryModelOverride?.model ?? userConfig.llm.model.get()
-    const endpointType = this.temporaryModelOverride?.endpointType ?? userConfig.llm.endpointType.get()
+    const model
+      = this.temporaryModelOverride?.model ?? userConfig.llm.model.get()
+    const endpointType
+      = this.temporaryModelOverride?.endpointType
+        ?? userConfig.llm.endpointType.get()
 
     this.history.value.push({
       id: this.generateId(),
@@ -212,7 +259,9 @@ export class ReactiveHistoryManager extends EventEmitter {
     }
     else {
       this.history.value.push(msg)
-      newMsg = this.history.value[this.history.value.length - 1] as TaskMessageV1
+      newMsg = this.history.value[
+        this.history.value.length - 1
+      ] as TaskMessageV1
     }
     return newMsg as TaskMessageV1
   }
@@ -226,10 +275,21 @@ export class ReactiveHistoryManager extends EventEmitter {
       tasks: [],
     }
     this.history.value.push(msg)
-    return this.history.value[this.history.value.length - 1] as AgentTaskGroupMessageV1
+    return this.history.value[
+      this.history.value.length - 1
+    ] as AgentTaskGroupMessageV1
   }
 
-  appendAgentTaskMessage(groupMessage: AgentTaskGroupMessageV1, { summary, details }: { summary: AgentTaskMessageV1['summary'], details?: AgentTaskMessageV1['details'] }) {
+  appendAgentTaskMessage(
+    groupMessage: AgentTaskGroupMessageV1,
+    {
+      summary,
+      details,
+    }: {
+      summary: AgentTaskMessageV1['summary']
+      details?: AgentTaskMessageV1['details']
+    },
+  ) {
     const msg: AgentTaskMessageV1 = {
       id: this.generateId(),
       role: 'agent-task',
@@ -299,11 +359,14 @@ export class ReactiveHistoryManager extends EventEmitter {
     this.cleanUp(this.chatHistory.value.history)
   }
 
-  cleanupLoadingAttachments(contextAttachmentStorage: Ref<ContextAttachmentStorage>) {
+  cleanupLoadingAttachments(
+    contextAttachmentStorage: Ref<ContextAttachmentStorage>,
+  ) {
     // Remove loading attachments from the attachments array
-    contextAttachmentStorage.value.attachments = contextAttachmentStorage.value.attachments.filter(
-      (attachment) => attachment.type !== 'loading',
-    )
+    contextAttachmentStorage.value.attachments
+      = contextAttachmentStorage.value.attachments.filter(
+        (attachment) => attachment.type !== 'loading',
+      )
     // Remove loading attachment from currentTab if it exists
     if (contextAttachmentStorage.value.currentTab?.type === 'loading') {
       contextAttachmentStorage.value.currentTab = undefined
@@ -314,9 +377,18 @@ export class ReactiveHistoryManager extends EventEmitter {
 type ChatStatus = 'idle' | 'pending' | 'streaming'
 
 const ACTION_EVENT_CONSTRUCT_TYPE = 'messageAction'
-export class ActionEvent<ActionType extends ActionTypeV1> extends CustomEvent<{ data: ActionV1[ActionType], action: ActionType }> {
-  constructor(public action: ActionType, public data: ActionV1[ActionType]) {
-    super(ACTION_EVENT_CONSTRUCT_TYPE, { bubbles: true, detail: { action, data } })
+export class ActionEvent<ActionType extends ActionTypeV1> extends CustomEvent<{
+  data: ActionV1[ActionType]
+  action: ActionType
+}> {
+  constructor(
+    public action: ActionType,
+    public data: ActionV1[ActionType],
+  ) {
+    super(ACTION_EVENT_CONSTRUCT_TYPE, {
+      bubbles: true,
+      detail: { action, data },
+    })
   }
 }
 
@@ -336,20 +408,28 @@ export class Chat {
         // Process chat history
         log.debug('[Chat] getInstance', chatHistoryId.value)
         const defaultTitle = i18n.t('chat_history.new_chat')
-        const existingChatHistory = await s2bRpc.getChatHistory(chatHistoryId.value)
-        const chatHistory = ref<ChatHistoryV1>(existingChatHistory ?? {
-          history: [],
-          id: chatHistoryId.value,
-          title: defaultTitle,
-          lastInteractedAt: Date.now(),
-          reasoningEnabled: undefined, // Default to undefined for new chats
-          onlineSearchEnabled: true, // Default to true for new chats
-          temperature: userConfig.llm.temperature.get(),
-        })
+        const existingChatHistory = await s2bRpc.getChatHistory(
+          chatHistoryId.value,
+        )
+        const chatHistory = ref<ChatHistoryV1>(
+          existingChatHistory ?? {
+            history: [],
+            id: chatHistoryId.value,
+            title: defaultTitle,
+            lastInteractedAt: Date.now(),
+            reasoningEnabled: undefined, // Default to undefined for new chats
+            onlineSearchEnabled: true, // Default to true for new chats
+            temperature: userConfig.llm.temperature.get(),
+          },
+        )
 
-        const applyReasoningPreference = (preference?: StoredReasoningPreference) => {
+        const applyReasoningPreference = (
+          preference?: StoredReasoningPreference,
+        ) => {
           if (preference === undefined) {
-            const normalized = normalizeReasoningPreference(userConfig.llm.reasoning.get())
+            const normalized = normalizeReasoningPreference(
+              userConfig.llm.reasoning.get(),
+            )
             userConfig.llm.reasoning.set(normalized)
             return
           }
@@ -359,14 +439,22 @@ export class Chat {
         }
 
         applyReasoningPreference(chatHistory.value.reasoningEnabled)
-        userConfig.chat.onlineSearch.enable.set(chatHistory.value.onlineSearchEnabled ?? true)
+        userConfig.chat.onlineSearch.enable.set(
+          chatHistory.value.onlineSearchEnabled ?? true,
+        )
         if (chatHistory.value.temperature === undefined) {
           chatHistory.value.temperature = userConfig.llm.temperature.get()
         }
         else {
           userConfig.llm.temperature.set(chatHistory.value.temperature)
         }
-        const contextAttachments = ref<ContextAttachmentStorage>(await s2bRpc.getContextAttachments(chatHistoryId.value) ?? { attachments: [], id: chatHistoryId.value, lastInteractedAt: Date.now() })
+        const contextAttachments = ref<ContextAttachmentStorage>(
+          (await s2bRpc.getContextAttachments(chatHistoryId.value)) ?? {
+            attachments: [],
+            id: chatHistoryId.value,
+            lastInteractedAt: Date.now(),
+          },
+        )
         const chatList = ref<ChatList>([])
         const updateChatList = async () => {
           chatList.value = await s2bRpc.getChatList()
@@ -376,16 +464,32 @@ export class Chat {
           // If chat history is not interacted with, do not save
           if (!chatHistory.value.lastInteractedAt) return
           // if user message is empty, do not save
-          const userMessages = chatHistory.value.history.filter((msg) => msg.role === 'user')
+          const userMessages = chatHistory.value.history.filter(
+            (msg) => msg.role === 'user',
+          )
           if (userMessages.length === 0) return
 
           log.debug('s2bRpc.autoGenerateChatTitle')
           // Auto-generate title if needed (when first message is added)
-          const titleResult = await s2bRpc.autoGenerateChatTitle(toRaw(chatHistory.value), chatHistoryId.value) as { success: boolean, updatedTitle?: string, titleChanged?: boolean, titleShouldBeApplied?: boolean, error?: string }
+          const titleResult = (await s2bRpc.autoGenerateChatTitle(
+            toRaw(chatHistory.value),
+            chatHistoryId.value,
+          )) as {
+            success: boolean
+            updatedTitle?: string
+            titleChanged?: boolean
+            titleShouldBeApplied?: boolean
+            error?: string
+          }
           log.debug('s2bRpc.autoGenerateChatTitle Done', titleResult)
 
           // Update the local chat history title if it was changed and should be applied to current chat
-          if (titleResult.success && titleResult.updatedTitle && titleResult.updatedTitle !== chatHistory.value.title && titleResult.titleShouldBeApplied) {
+          if (
+            titleResult.success
+            && titleResult.updatedTitle
+            && titleResult.updatedTitle !== chatHistory.value.title
+            && titleResult.titleShouldBeApplied
+          ) {
             chatHistory.value.title = titleResult.updatedTitle
           }
 
@@ -397,7 +501,10 @@ export class Chat {
         }, 1000)
         const debounceSaveContextAttachment = debounce(async () => {
           // FIXME: if user message is empty, chat history won't be saved, but context attachments will be saved
-          log.debug('Debounce save context attachments', contextAttachments.value)
+          log.debug(
+            'Debounce save context attachments',
+            contextAttachments.value,
+          )
           if (!contextAttachments.value.lastInteractedAt) return
           await s2bRpc.saveContextAttachments(toRaw(contextAttachments.value))
         }, 1000)
@@ -411,7 +518,11 @@ export class Chat {
 
           // Load the new chat data
           const existingNewChatHistory = await s2bRpc.getChatHistory(newId)
-          log.debug('Loaded chat history for new chat ID:', newId, existingNewChatHistory)
+          log.debug(
+            'Loaded chat history for new chat ID:',
+            newId,
+            existingNewChatHistory,
+          )
           const newChatHistory: ChatHistoryV1 = existingNewChatHistory ?? {
             history: [],
             id: newId,
@@ -423,18 +534,21 @@ export class Chat {
             temperature: userConfig.llm.temperature.get(),
           }
 
-          const newContextAttachments: ContextAttachmentStorage = await s2bRpc.getContextAttachments(newId) ?? {
-            attachments: [],
-            id: newId,
-            lastInteractedAt: Date.now(),
-          }
+          const newContextAttachments: ContextAttachmentStorage
+            = (await s2bRpc.getContextAttachments(newId)) ?? {
+              attachments: [],
+              id: newId,
+              lastInteractedAt: Date.now(),
+            }
 
           // Update the reactive objects
           Object.assign(chatHistory.value, newChatHistory)
           Object.assign(contextAttachments.value, newContextAttachments)
 
           applyReasoningPreference(newChatHistory.reasoningEnabled)
-          userConfig.chat.onlineSearch.enable.set(newChatHistory.onlineSearchEnabled ?? true)
+          userConfig.chat.onlineSearch.enable.set(
+            newChatHistory.onlineSearchEnabled ?? true,
+          )
           if (newChatHistory.temperature === undefined) {
             newChatHistory.temperature = userConfig.llm.temperature.get()
           }
@@ -451,7 +565,9 @@ export class Chat {
           updateChatList()
         })
         watch(chatHistory, async () => debounceSaveHistory(), { deep: true })
-        watch(contextAttachments, async () => debounceSaveContextAttachment(), { deep: true })
+        watch(contextAttachments, async () => debounceSaveContextAttachment(), {
+          deep: true,
+        })
         updateChatList()
 
         // Register RPC event listener for updateChatList
@@ -461,53 +577,97 @@ export class Chat {
         })
 
         // Create the Chat instance
-        const instance = new this(new ReactiveHistoryManager(chatHistory), contextAttachments, chatList)
+        const instance = new this(
+          new ReactiveHistoryManager(chatHistory),
+          contextAttachments,
+          chatList,
+        )
         return instance
       })()
     }
     return this.instance
   }
 
-  static createActionEventDispatcher<ActionType extends ActionTypeV1>(action: ActionType) {
-    return function actionEvent(data: ActionV1[ActionType], el?: HTMLElement | EventTarget | null) {
+  static createActionEventDispatcher<ActionType extends ActionTypeV1>(
+    action: ActionType,
+  ) {
+    return function actionEvent(
+      data: ActionV1[ActionType],
+      el?: HTMLElement | EventTarget | null,
+    ) {
       log.debug('Creating action event', action, data)
-      ; (el ?? window).dispatchEvent(new ActionEvent<ActionType>(action, data))
+      ;(el ?? window).dispatchEvent(new ActionEvent<ActionType>(action, data))
     }
   }
 
-  static createActionEventHandler(handler: (ev: ActionEvent<ActionTypeV1>) => void) {
+  static createActionEventHandler(
+    handler: (ev: ActionEvent<ActionTypeV1>) => void,
+  ) {
     return function actionHandler(ev: Event) {
-      if (ev.type === ACTION_EVENT_CONSTRUCT_TYPE && ev instanceof CustomEvent) {
+      if (
+        ev.type === ACTION_EVENT_CONSTRUCT_TYPE
+        && ev instanceof CustomEvent
+      ) {
         log.debug('Action event triggered', ev)
         // reconstruct the event to fix firefox issue
         // firefox does not pass the origin event instance in the event bubbling
-        const event = ev as CustomEvent<{ action: ActionTypeV1, data: ActionV1[ActionTypeV1] }>
-        const actionEvent = new ActionEvent<ActionTypeV1>(event.detail.action, event.detail.data)
+        const event = ev as CustomEvent<{
+          action: ActionTypeV1
+          data: ActionV1[ActionTypeV1]
+        }>
+        const actionEvent = new ActionEvent<ActionTypeV1>(
+          event.detail.action,
+          event.detail.data,
+        )
         handler(actionEvent)
       }
     }
   }
 
-  constructor(public historyManager: ReactiveHistoryManager, public contextAttachmentStorage: Ref<ContextAttachmentStorage>, public chatList: Ref<ChatList>) { }
+  constructor(
+    public historyManager: ReactiveHistoryManager,
+    public contextAttachmentStorage: Ref<ContextAttachmentStorage>,
+    public chatList: Ref<ChatList>,
+  ) {}
 
   get contextAttachments() {
     return toRef(this.contextAttachmentStorage.value, 'attachments')
   }
 
   get contextTabs() {
-    const contextTabs = this.contextAttachments.value.filter((attachment) => attachment.type === 'tab').map((attachment) => attachment.value)
-    const currentTab = this.contextAttachmentStorage.value.currentTab?.type === 'tab' ? this.contextAttachmentStorage.value.currentTab.value : undefined
-    const filteredContextTabs = contextTabs.filter((tab) => tab.id !== currentTab?.id)
-    return [currentTab ? { ...currentTab, isCurrent: true } : undefined, ...filteredContextTabs.map((tab) => ({ ...tab, isCurrent: false }))].filter(nonNullable)
+    const contextTabs = this.contextAttachments.value
+      .filter((attachment) => attachment.type === 'tab')
+      .map((attachment) => attachment.value)
+    const currentTab
+      = this.contextAttachmentStorage.value.currentTab?.type === 'tab'
+        ? this.contextAttachmentStorage.value.currentTab.value
+        : undefined
+    const filteredContextTabs = contextTabs.filter(
+      (tab) => tab.id !== currentTab?.id,
+    )
+    return [
+      currentTab ? { ...currentTab, isCurrent: true } : undefined,
+      ...filteredContextTabs.map((tab) => ({ ...tab, isCurrent: false })),
+    ].filter(nonNullable)
   }
 
   get contextImages() {
-    return this.contextAttachments.value.filter((attachment) => attachment.type === 'image').map((attachment) => attachment.value)
+    return this.contextAttachments.value
+      .filter((attachment) => attachment.type === 'image')
+      .map((attachment) => attachment.value)
   }
 
   get contextPDFs() {
-    const currentTab = this.contextAttachmentStorage.value.currentTab?.type === 'pdf' ? this.contextAttachmentStorage.value.currentTab.value : undefined
-    return [currentTab, ...this.contextAttachments.value.filter((attachment) => attachment.type === 'pdf').map((attachment) => attachment.value)].filter(nonNullable)
+    const currentTab
+      = this.contextAttachmentStorage.value.currentTab?.type === 'pdf'
+        ? this.contextAttachmentStorage.value.currentTab.value
+        : undefined
+    return [
+      currentTab,
+      ...this.contextAttachments.value
+        .filter((attachment) => attachment.type === 'pdf')
+        .map((attachment) => attachment.value),
+    ].filter(nonNullable)
   }
 
   isAnswering() {
@@ -528,12 +688,14 @@ export class Chat {
   async getContentOfTabs() {
     const relevantTabIds = this.contextTabs.map((tab) => tab.tabId)
     const currentTab = this.contextTabs.find((tab) => tab.isCurrent)
-    const pages = (await getDocumentContentOfTabs(relevantTabIds)).filter(nonNullable).map((tabContent) => {
-      return {
-        ...tabContent,
-        isActive: currentTab?.tabId === tabContent.tabId,
-      }
-    })
+    const pages = (await getDocumentContentOfTabs(relevantTabIds))
+      .filter(nonNullable)
+      .map((tabContent) => {
+        return {
+          ...tabContent,
+          isActive: currentTab?.tabId === tabContent.tabId,
+        }
+      })
     return pages
   }
 
@@ -548,11 +710,13 @@ export class Chat {
     const isReady = await isCurrentModelReady()
     if (!isReady) {
       const initIter = initCurrentModel(abortController.signal)
-      const msg = this.historyManager.appendTaskMessage(`${makeMarkdownIcon('download')} Loading model...`)
+      const msg = this.historyManager.appendTaskMessage(
+        `${makeMarkdownIcon('download')} Loading model...`,
+      )
       try {
         for await (const progress of initIter) {
           if (progress.type === 'progress') {
-            msg.content = `${makeMarkdownIcon('download')} Loading model... ${((progress.progress.progress * 100).toFixed(0))}%`
+            msg.content = `${makeMarkdownIcon('download')} Loading model... ${(progress.progress.progress * 100).toFixed(0)}%`
           }
         }
         msg.done = true
@@ -582,14 +746,60 @@ export class Chat {
     const userMsg = this.historyManager.appendUserMessage()
 
     const environmentDetails = await this.generateEnvironmentDetails(userMsg.id)
-    const prompt = _prompt ?? await chatWithEnvironment(question, environmentDetails)
+    const prompt
+      = _prompt ?? (await chatWithEnvironment(question, environmentDetails))
     // the display content on UI and the content that should be sent to the LLM are different
     userMsg.displayContent = question
     userMsg.content = prompt.user.extractText()
 
-    const baseMessages = this.historyManager.getLLMMessages({ system: prompt.system, lastUser: prompt.user })
+    const baseMessages = this.historyManager.getLLMMessages({
+      system: prompt.system,
+      lastUser: prompt.user,
+    })
     await this.prepareModel()
-    if (this.contextPDFs.length > 1) log.warn('Multiple PDFs are attached, only the first one will be used for the chat context.')
+    if (this.contextPDFs.length > 1)
+      log.warn(
+        'Multiple PDFs are attached, only the first one will be used for the chat context.',
+      )
+    await this.runWithAgent(baseMessages)
+  }
+
+  async askWithSkill(skillName: string, userInput: string) {
+    using _s = this.statusScope('pending')
+    const abortController = new AbortController()
+    this.abortControllers.push(abortController)
+
+    this.historyManager.chatHistory.value.lastInteractedAt = Date.now()
+
+    const userMsg = this.historyManager.appendUserMessage()
+    const skill = await getSkillByName(skillName)
+    if (!skill || !skill.enabled) {
+      userMsg.displayContent = `/${skillName} ${userInput}`.trim()
+      userMsg.content = `Skill "${skillName}" not found or disabled.`
+      userMsg.done = true
+      return
+    }
+
+    const environmentDetails = await this.generateEnvironmentDetails(userMsg.id)
+    const skillContext = buildSkillActivationContext(skill, userInput)
+    const question = userInput.trim() || `Use skill "${skill.name}".`
+    const prompt = await chatWithEnvironment(
+      question,
+      [environmentDetails, skillContext].filter(Boolean).join('\n\n'),
+    )
+
+    userMsg.displayContent = `/${skill.name} ${userInput}`.trim()
+    userMsg.content = prompt.user.extractText()
+
+    const baseMessages = this.historyManager.getLLMMessages({
+      system: prompt.system,
+      lastUser: prompt.user,
+    })
+    await this.prepareModel()
+    if (this.contextPDFs.length > 1)
+      log.warn(
+        'Multiple PDFs are attached, only the first one will be used for the chat context.',
+      )
     await this.runWithAgent(baseMessages)
   }
 
@@ -597,10 +807,14 @@ export class Chat {
     const trimmedQuestion = question.trim()
     if (!trimmedQuestion) throw new Error('Question cannot be empty.')
 
-    const messageIndex = this.historyManager.history.value.findIndex((item) => item.id === messageId)
-    if (messageIndex === -1) throw new Error(`Message with id ${messageId} not found.`)
+    const messageIndex = this.historyManager.history.value.findIndex(
+      (item) => item.id === messageId,
+    )
+    if (messageIndex === -1)
+      throw new Error(`Message with id ${messageId} not found.`)
     const message = this.historyManager.history.value[messageIndex]
-    if (message.role !== 'user') throw new Error(`Message with id ${messageId} is not a user message.`)
+    if (message.role !== 'user')
+      throw new Error(`Message with id ${messageId} is not a user message.`)
 
     this.stop()
     using _s = this.statusScope('pending')
@@ -615,23 +829,34 @@ export class Chat {
 
     const contextInfo = this.historyManager.chatHistory.value.contextUpdateInfo
     if (contextInfo?.lastFullUpdateMessageId) {
-      const exists = this.historyManager.history.value.some((item) => item.id === contextInfo.lastFullUpdateMessageId)
+      const exists = this.historyManager.history.value.some(
+        (item) => item.id === contextInfo.lastFullUpdateMessageId,
+      )
       if (!exists) {
         contextInfo.lastFullUpdateMessageId = undefined
       }
     }
 
     const environmentDetails = await this.generateEnvironmentDetails(message.id)
-    const prompt = await chatWithEnvironment(trimmedQuestion, environmentDetails)
+    const prompt = await chatWithEnvironment(
+      trimmedQuestion,
+      environmentDetails,
+    )
 
     message.displayContent = trimmedQuestion
     message.content = prompt.user.extractText()
     message.timestamp = Date.now()
     message.done = true
 
-    const baseMessages = this.historyManager.getLLMMessages({ system: prompt.system, lastUser: prompt.user })
+    const baseMessages = this.historyManager.getLLMMessages({
+      system: prompt.system,
+      lastUser: prompt.user,
+    })
     await this.prepareModel()
-    if (this.contextPDFs.length > 1) log.warn('Multiple PDFs are attached, only the first one will be used for the chat context.')
+    if (this.contextPDFs.length > 1)
+      log.warn(
+        'Multiple PDFs are attached, only the first one will be used for the chat context.',
+      )
     await this.runWithAgent(baseMessages)
   }
 
@@ -651,6 +876,9 @@ export class Chat {
         view_pdf: { execute: executeViewPdf },
         view_image: { execute: executeViewImage },
         click: { execute: executePageClick },
+        skill_call: { execute: executeSkillCall },
+        skill_read_file: { execute: executeSkillReadFile },
+        skill_run: { execute: executeSkillRun },
       },
     })
     this.currentAgent = agent
@@ -658,21 +886,37 @@ export class Chat {
   }
 
   private async generateEnvironmentDetails(currentUserMessageId: string) {
-    const fullEnvironmentDetailsFrequency = (await getUserConfig()).chat.environmentDetails.fullUpdateFrequency.get()
-    const environmentDetailsBuilder = new EnvironmentDetailsBuilder(this.contextAttachmentStorage.value)
-    const contextUpdateInfo = this.historyManager.chatHistory.value.contextUpdateInfo
+    const fullEnvironmentDetailsFrequency = (
+      await getUserConfig()
+    ).chat.environmentDetails.fullUpdateFrequency.get()
+    const environmentDetailsBuilder = new EnvironmentDetailsBuilder(
+      this.contextAttachmentStorage.value,
+    )
+    const contextUpdateInfo
+      = this.historyManager.chatHistory.value.contextUpdateInfo
     if (contextUpdateInfo) {
       const lastFullUpdateMessageId = contextUpdateInfo.lastFullUpdateMessageId
       if (lastFullUpdateMessageId) {
-        const count = this.historyManager.countMessagesRight({ untilId: lastFullUpdateMessageId, includesMessageTypes: ['user', 'assistant'] })
+        const count = this.historyManager.countMessagesRight({
+          untilId: lastFullUpdateMessageId,
+          includesMessageTypes: ['user', 'assistant'],
+        })
         if (count <= fullEnvironmentDetailsFrequency) {
-          const envDefaults = environmentDetailsBuilder.generateUpdates(contextUpdateInfo.lastAttachmentIds)
-          contextUpdateInfo.lastAttachmentIds = [...new Set([...contextUpdateInfo.lastAttachmentIds, ...environmentDetailsBuilder.getAllAttachmentIds()])]
+          const envDefaults = environmentDetailsBuilder.generateUpdates(
+            contextUpdateInfo.lastAttachmentIds,
+          )
+          contextUpdateInfo.lastAttachmentIds = [
+            ...new Set([
+              ...contextUpdateInfo.lastAttachmentIds,
+              ...environmentDetailsBuilder.getAllAttachmentIds(),
+            ]),
+          ]
           return envDefaults
         }
       }
       contextUpdateInfo.lastFullUpdateMessageId = currentUserMessageId
-      contextUpdateInfo.lastAttachmentIds = environmentDetailsBuilder.getAllAttachmentIds()
+      contextUpdateInfo.lastAttachmentIds
+        = environmentDetailsBuilder.getAllAttachmentIds()
       return environmentDetailsBuilder.generateFull()
     }
     else {
@@ -754,7 +998,9 @@ export class Chat {
   /**
    * Toggle pinned status of a chat
    */
-  async toggleChatStar(chatId: string): Promise<{ success: boolean, isPinned?: boolean }> {
+  async toggleChatStar(
+    chatId: string,
+  ): Promise<{ success: boolean, isPinned?: boolean }> {
     try {
       const result = await s2bRpc.toggleChatStar(chatId)
 
@@ -815,5 +1061,5 @@ export class Chat {
 
 if (import.meta.env.DEV) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (self as any).__NATIVEMIND_GET_CHAT_INSTANCE = () => Chat.getInstance()
+  ;(self as any).__NATIVEMIND_GET_CHAT_INSTANCE = () => Chat.getInstance()
 }

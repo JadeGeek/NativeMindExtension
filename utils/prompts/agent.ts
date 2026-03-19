@@ -1,7 +1,24 @@
 import { PromptBasedTool, PromptBasedToolParams } from '../llm/tools/prompt-based/helpers'
+import { listSkillMetadata } from '../skills'
 import { definePrompt, PromptBasedToolBuilder, renderPrompt, UserPrompt } from './helpers'
 
 export const browserUseSystemPrompt = definePrompt(async (tools: PromptBasedTool<string, PromptBasedToolParams>[]) => {
+  const availableSkills = await listSkillMetadata()
+  const availableSkillsBlock = availableSkills.length
+    ? `
+  <available_skills>
+  ${availableSkills
+    .filter((skill) => skill.enabled)
+    .map((skill) => {
+      return `<skill>
+    <name>${skill.name}</name>
+    <description>${skill.description}</description>
+    <location>skill://${skill.name}/SKILL.md</location>
+  </skill>`
+    })
+    .join('\n')}
+  </available_skills>`
+    : ''
   const system = `You are an intelligent AI assistant integrated into a browser extension called NativeMind. Your primary role is to help users to use browser tools to resolve their queries.
 
   # LANGUAGE POLICY
@@ -49,6 +66,9 @@ export const browserUseSystemPrompt = definePrompt(async (tools: PromptBasedTool
   - Do NOT continue calling tools if you have sufficient information to answer the question
   - This approach allows for better error handling and more targeted responses
   
+  # AVAILABLE SKILLS:
+  ${availableSkillsBlock}
+
   # AVAILABLE TOOLS:
   
   ${tools.map((tool) => renderPrompt`${new PromptBasedToolBuilder(tool)}`).join('\n\n')}

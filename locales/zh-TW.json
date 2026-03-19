@@ -8,10 +8,6 @@
       "used_model": "使用了 {model}"
     },
     "temperature": {
-      "title": "溫度",
-      "helper": "值越高，回應越隨機"
-    },
-    "temperature": {
       "label": "溫度",
       "helper": "值越高，回應越隨機",
       "reset": "重設"
@@ -342,6 +338,26 @@
         "title": "快速動作",
         "reset_to_default": "重設為預設值",
         "reset_to_default_confirm": "您確定要將快速動作重設為預設值嗎？"
+      },
+      "skills": {
+        "title": "Skills",
+        "import": "Import Skill",
+        "export": "Export",
+        "delete": "Delete",
+        "empty": "No skills imported yet.",
+        "approve": "Approve",
+        "revoke": "Revoke",
+        "entry": "Entry",
+        "entry_none": "none",
+        "entry_missing": "missing",
+        "files": "Files",
+        "files_view": "View files",
+        "files_empty": "no files",
+        "allowed_tools": "Allowed tools",
+        "import_failed": "Failed to import skill: {error}",
+        "import_success": "Imported {count} files: {files}",
+        "permission_prompt": "Skill \"{name}\" requests access to: {tools}. Approve?",
+        "permission_tools_empty": "no declared tools"
       }
     },
     "common": {

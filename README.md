@@ -204,6 +204,17 @@ Here’s a quick breakdown to help you see where it stands — and when it might
 </tr>
 </table>
 
+### Skills (Local Actions)
+
+NativeMind supports user-defined Skills for local, on-device automation. Skills live in `skills/` and use `SKILL.md` frontmatter to declare metadata, entry scripts, and allowed tools.
+
+New or extended Skill tools include:
+- DOM read/write utilities: `querySelector`, `querySelectorAll`, `getText`, `getAttribute`, `getTextList`
+- DOM actions: `click`, `clickByText`, `setValue`, `setAttribute`
+- Network: `fetchText` (via SW or DOM depending on context)
+
+For a full guide and template, see `skills/README.md`.
+
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v22.14.0 recommended)

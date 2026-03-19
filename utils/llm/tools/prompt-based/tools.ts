@@ -39,6 +39,22 @@ export const browserUseHandOffs = new PromptBasedTool('browser_use', 'Use the br
   query: z.string().describe('The action to perform in the browser'),
 })
 
+export const skillCallTool = new PromptBasedTool('skill_call', 'Activate a skill by name and load its instructions', {
+  name: z.string().min(1).describe('skill name'),
+  user_input: z.string().optional().describe('optional user input to pass into the skill'),
+})
+
+export const skillReadFileTool = new PromptBasedTool('skill_read_file', 'Read a file from a skill package by relative path', {
+  name: z.string().min(1).describe('skill name'),
+  path: z.string().min(1).describe('relative path inside the skill directory'),
+})
+
+export const skillRunTool = new PromptBasedTool('skill_run', 'Run a skill script in the current tab', {
+  name: z.string().min(1).describe('skill name'),
+  script_path: z.string().min(1).describe('script path inside the skill package'),
+  args: z.string().optional().describe('optional arguments'),
+})
+
 export const promptBasedTools = [
   viewTabTool,
   viewPdfTool,
@@ -46,16 +62,19 @@ export const promptBasedTools = [
   searchOnlineTool,
   fetchPageTool,
   pageClickTool,
+  skillCallTool,
+  skillReadFileTool,
+  skillRunTool,
 ]
 
 export const promptBasedToolCollections = {
   browserUse: {
-    onlineSearch: [viewTabForWithInteractiveElementsTool, viewPdfTool, viewImageTool, searchOnlineTool, fetchPageWithInteractiveElementsTool, pageClickTool],
-    nonOnlineSearch: [viewTabForWithInteractiveElementsTool, viewPdfTool, viewImageTool, fetchPageWithInteractiveElementsTool, pageClickTool],
+    onlineSearch: [viewTabForWithInteractiveElementsTool, viewPdfTool, viewImageTool, searchOnlineTool, fetchPageWithInteractiveElementsTool, pageClickTool, skillCallTool, skillReadFileTool, skillRunTool],
+    nonOnlineSearch: [viewTabForWithInteractiveElementsTool, viewPdfTool, viewImageTool, fetchPageWithInteractiveElementsTool, pageClickTool, skillCallTool, skillReadFileTool, skillRunTool],
   },
   nonBrowserUse: {
-    onlineSearch: [viewTabTool, viewPdfTool, viewImageTool, searchOnlineTool, fetchPageTool],
-    nonOnlineSearch: [viewTabTool, viewPdfTool, viewImageTool, fetchPageTool],
+    onlineSearch: [viewTabTool, viewPdfTool, viewImageTool, searchOnlineTool, fetchPageTool, skillCallTool, skillReadFileTool, skillRunTool],
+    nonOnlineSearch: [viewTabTool, viewPdfTool, viewImageTool, fetchPageTool, skillCallTool, skillReadFileTool, skillRunTool],
   },
 }
 

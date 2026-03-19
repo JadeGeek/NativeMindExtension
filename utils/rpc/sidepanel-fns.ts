@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events'
 import { Browser } from 'wxt/browser'
 
+import { runSkillInSandbox } from '@/entrypoints/sidepanel/utils/skills/sandbox'
 import { TabInfo } from '@/types/tab'
 
 import type { ContextMenuId } from '../context-menu'
@@ -33,6 +34,7 @@ export const sidepanelFunctions = {
   },
   ping,
   getSidepanelStatus,
+  runSkillInSandbox,
 } as const
 
 export function registerSidepanelRpcEvent<E extends EventKey>(ev: E, fn: (...args: Parameters<Events[E]>) => void) {

@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { browser } from 'wxt/browser'
 
 import { DEFAULT_REASONING_PREFERENCE, normalizeReasoningPreference } from '@/types/reasoning'
+import { SkillDefinition, SkillFile, SkillPermissionState } from '@/types/skill'
 import { ThemeModeType } from '@/types/theme'
 import { c2bRpc } from '@/utils/rpc'
 
@@ -97,6 +98,62 @@ export async function _getUserConfig() {
   const normalizedReasoning = normalizeReasoningPreference(reasoning.get())
   reasoning.set(normalizedReasoning)
 
+  const skillsItems = await new Config<SkillDefinition[], SkillDefinition[]>('chat.skills.items_1')
+    .default([] as SkillDefinition[])
+    .build()
+  const skillsPermissions = await new Config<Record<string, SkillPermissionState>, Record<string, SkillPermissionState>>('chat.skills.permissions_1')
+    .default({} as Record<string, SkillPermissionState>)
+    .build()
+  const skillsFiles = await new Config<Record<string, SkillFile[]>, Record<string, SkillFile[]>>('chat.skills.files_1')
+    .default({} as Record<string, SkillFile[]>)
+    .build()
+  const normalizedFiles: Record<string, SkillFile[]> = {}
+  let shouldPersistFiles = false
+  let shouldPersistPermissions = false
+  const normalizedSkills = skillsItems.get().map((skill) => {
+    const files = Array.isArray(skill.files) ? skill.files : []
+    if (files.length > 0) {
+      normalizedFiles[skill.name] = files
+      shouldPersistFiles = true
+    }
+    return {
+      ...skill,
+      files: [],
+    }
+  })
+  const storedFiles = skillsFiles.get()
+  for (const [name, files] of Object.entries(storedFiles ?? {})) {
+    if (Array.isArray(files)) {
+      normalizedFiles[name] = files
+    }
+    else {
+      shouldPersistFiles = true
+    }
+  }
+  if (normalizedSkills.some((_skill, index) => {
+    const current = skillsItems.get()[index]
+    return !Array.isArray(current.files)
+  }) || shouldPersistFiles) {
+    skillsItems.set(normalizedSkills)
+    skillsFiles.set(normalizedFiles)
+  }
+
+  const permissionsMap = skillsPermissions.get()
+  if (permissionsMap && typeof permissionsMap === 'object') {
+    for (const [name, permission] of Object.entries(permissionsMap)) {
+      if (permission && typeof permission === 'object' && !('allowedTools' in permission)) {
+        permissionsMap[name] = {
+          ...permission,
+          allowedTools: '',
+        } as SkillPermissionState
+        shouldPersistPermissions = true
+      }
+    }
+  }
+  if (shouldPersistPermissions) {
+    skillsPermissions.set({ ...(permissionsMap ?? {}) })
+  }
+
   return {
     locale: {
       current: await new Config<SupportedLocaleCode, undefined>('locale.current').build(),
@@ -163,6 +220,11 @@ export async function _getUserConfig() {
       },
       quickActions: {
         actions: await new Config('chat.quickActions.actions_4').default(DEFAULT_QUICK_ACTIONS).build(),
+      },
+      skills: {
+        items: skillsItems,
+        files: skillsFiles,
+        permissions: skillsPermissions,
       },
       thinkingVisibility: await new Config('chat.thinkingVisibility').default('preview' as 'hide' | 'preview' | 'full').build(),
     },
